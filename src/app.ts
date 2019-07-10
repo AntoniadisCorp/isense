@@ -29,6 +29,7 @@ class Server {
     public socketio: any
     // SERVER LISTEN PORTS
     public PORT: number | string = 3000
+    public IP: string
 
     //create classes routes, routines
     private gbObject: GBRoutines = new GBRoutines()
@@ -62,8 +63,9 @@ class Server {
             ephemeral: true
         }
 
-        this.PORT = 'production' == this.env ? process.env.PORT || this.PORT : this.PORT
-
+        // this.PORT = 'production' == this.env ? process.env.OPENSHIFT_NODEJS_PORT || this.PORT : this.PORT
+        this.PORT = process.env.OPENSHIFT_NODEJS_PORT || this.PORT
+        this.IP = process.env.OPENSHIFT_NODEJS_IP || 'localhost'
         this.mainServe()
     }
 

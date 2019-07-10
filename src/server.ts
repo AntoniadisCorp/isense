@@ -3,9 +3,10 @@
 /**
  * Module dependencies.
  */
-import serve from '../app'
+import serve from './app'
 import https  from 'https'
 import fs from 'fs'
+import { normalize } from 'path';
 // var debug = require('debug')('technica:server');
 
 var key = fs.readFileSync('server-key.pem')
@@ -25,8 +26,10 @@ var key = fs.readFileSync('server-key.pem')
 /**
  * Get port from environment and store in Express.
  */
-var port = normalizePort(serve.PORT.toString() || '3000');
+var port = normalizePort(serve.PORT.toString() || '3000'),
+    ip = serve.IP.toString();
 serve.app.set('port', port);
+serve.app.set('ip', ip);
 
 
 /**
@@ -37,7 +40,7 @@ let server = https.createServer(options, serve.app);
 /**
  * Listen on provided port, on all network interfaces.
  */
-server.listen(port);
+server.listen(port, () => ip);
 server.on('error', onError);
 server.on('listening', onListening);
 
