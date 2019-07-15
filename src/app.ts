@@ -17,6 +17,7 @@ import bodyParser from 'body-parser'
 // Configuring Passport
 import passport from 'passport'
 import session from 'express-session'
+
 // , flash    = require('connect-flash')
 // , HOST = 'localhost' //prokopis.hopto.org
 
@@ -28,7 +29,7 @@ class Server {
     // SOCKET IO
     public socketio: any
     // SERVER LISTEN PORTS
-    public PORT: number | string = 3000
+    public PORT: number | string = 8080
     public IP: string
 
     //create classes routes, routines
@@ -64,8 +65,8 @@ class Server {
         }
 
         // this.PORT = 'production' == this.env ? process.env.OPENSHIFT_NODEJS_PORT || this.PORT : this.PORT
-        this.PORT = process.env.OPENSHIFT_NODEJS_PORT || this.PORT
-        this.IP = process.env.OPENSHIFT_NODEJS_IP || 'localhost'
+        this.PORT = process.env.PORT || this.PORT
+        this.IP = process.env.IP || 'localhost'
         this.mainServe()
     }
 
