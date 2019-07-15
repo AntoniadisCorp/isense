@@ -2,7 +2,7 @@ import { Response } from 'express'
 import useragent from 'express-useragent'
 import { utype } from './datamodel'
 import { isString, isArray,  } from 'util';
-import * as bCrypt from 'bCrypt'
+import { compareSync, hashSync, genSaltSync } from 'bcrypt'
 class GBRoutines {
 
         // private version: string
@@ -59,13 +59,13 @@ class GBRoutines {
             // Compares hashed passwords using bCrypt
             public isValidPassword(user:utype, password:string) {
                 
-                return bCrypt.compareSync(password, user.password)
+                return compareSync(password, user.password)
             }
 
             // Generates hash using bCrypt
             public createHash(password: string) {
 
-                return bCrypt.hashSync(password, bCrypt.genSaltSync(10))
+                return hashSync(password, genSaltSync(10))
             }
 
             public Variablevalid(s: any) {
