@@ -29,7 +29,7 @@ class Server {
     // SOCKET IO
     public socketio: any
     // SERVER LISTEN PORTS
-    public PORT: number | string = 8080
+    public PORT: number | string = 1337
     public IP: string
 
     //create classes routes, routines
