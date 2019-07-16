@@ -4,7 +4,7 @@
   "description": "",
   "main": "isense.js",
   "scripts": {
-    "start": "node dist/isense.js",
+    "start": "node src/isense.ts",
     "dev": "nodemon src/isense.ts",
     "build": "tsc -p ."
   },
