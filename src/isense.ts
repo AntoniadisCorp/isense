@@ -4,23 +4,27 @@
  * Module dependencies.
  */
 import serve from './app'
-import https  from 'http'
+import https  from 'https'
 import fs from 'fs'
 import { normalize } from 'path';
 
 // var debug = require('debug')('technica:server');
 
 var enforce = require('express-sslify')
-/* var key = fs.readFileSync('server-key.pem')
+, key = fs.readFileSync('server-key.pem')
 , cert = fs.readFileSync('server-crt.pem')
+// , pfx = fs.readFileSync('smartdeep.io.pfx')
 , options = {
-    key: key,
-    cert: cert, */
-/*  ca: fsx.readFileSync('ca-crt.pem'),
+  key: key,
+  cert: cert,
+ /*   pfx,
+    passphrase: 'For(Life#0)'
+  
+    ca: fsx.readFileSync('ca-crt.pem'),
     crl: fsx.readFileSync('ca-crl.pem'), 
     requestCert: true, 
-    rejectUnauthorized: true 
-} */
+    rejectUnauthorized: true */ 
+}
 
 
 // http.globalAgent.maxSockets = 100;
@@ -39,12 +43,12 @@ serve.app.set('ip', ip);
  */
 // for https
 serve.app.use(enforce.HTTPS({ trustProtoHeader: true }))
-let server = https.createServer(serve.app);
+let server = https.createServer(options, serve.app);
 
 /**
  * Listen on provided port, on all network interfaces.
  */
-server.listen(port, () => ip);
+server.listen(port, onListen);
 server.on('error', onError);
 server.on('listening', onListening);
 
@@ -66,6 +70,12 @@ function normalizePort(val: string) {
   if (isNaN(port)) {return val;}	// named pipe
   if (port >= 0)   {return port;}	// port number
   return false;
+}
+
+function onListen() {
+
+  console.log('Server Running on %s:%s', ip, port)
+  return ip
 }
 
 /**

@@ -1,8 +1,13 @@
 import { Response } from 'express'
 import useragent from 'express-useragent'
 import { utype } from './datamodel'
-import { isString, isArray,  } from 'util';
-import { compareSync, hashSync, genSaltSync } from 'bcrypt'
+import { isString, isArray } from 'util';
+import { Interface } from 'readline';
+import { Category, ICategory } from '../db/models';
+import { Mongoose } from 'mongoose';
+
+
+/* import { compareSync, hashSync, genSaltSync } from 'bcrypt' */
 class GBRoutines {
 
         // private version: string
@@ -55,24 +60,48 @@ class GBRoutines {
                 }
             }
 
-            /* -------------------------- passport Strategy -------------------------- */
-            // Compares hashed passwords using bCrypt
-            public isValidPassword(user:utype, password:string) {
-                
-                return compareSync(password, user.password)
+        /* -------------------------- passport Strategy -------------------------- */
+        // Compares hashed passwords using bCrypt
+        public isValidPassword(user:utype, password:string) {
+            
+            return /* compareSync(password, user.password) */ ''
+        }
+
+        // Generates hash using bCrypt
+        public createHash(password: string) {
+
+            return /* hashSync(password, genSaltSync(10)) */ ''
+        }
+
+        public Variablevalid(s: any) {
+
+            return s && (isString(s) || isArray(s)) && s.length > 0 ? s : null
+        }
+
+        public getNestedChildren = (arr: Array<any>, parent?: string) => {
+            let out: Array<any> = []
+            let str: string;
+
+            for(let i in arr) {
+                str = arr[i].parent_id? arr[i].parent_id : undefined
+
+                /* console.log( 'parent_id: ' + str  + `  ` + parent) */
+                if( !str && str == parent || str && str.toString() == parent ) {
+
+                    let children = this.getNestedChildren(arr, arr[i]._id)
+
+                    if(children.length>0) arr[i].children = children
+
+                    out.push(arr[i])
+                }
             }
+            return out
+        }
 
-            // Generates hash using bCrypt
-            public createHash(password: string) {
+        public escapeRegex(text: string) {
 
-                return hashSync(password, genSaltSync(10))
-            }
-
-            public Variablevalid(s: any) {
-
-                return s && (isString(s) || isArray(s)) && s.length > 0 ? s : null
-            }
-
+            return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+        }
 }
 
 export { GBRoutines }

@@ -7,6 +7,7 @@ Save the following server in example.js:
 // var sys = require('sys')
 import net = require('net')
 import { GBRoutines } from '.'
+let gps = require('gps-tracking');
 
 class TcpSocketServer {
 
@@ -18,6 +19,7 @@ class TcpSocketServer {
     // List Array
     private sockets: Array<any>
     private server: any
+    private gpsOptions: any
 
     constructor (svraddr?: string, svrport?: number) {
 
@@ -26,10 +28,98 @@ class TcpSocketServer {
         this.svraddr = gbr.Variablevalid(svraddr) == null? '0.0.0.0' : svraddr
         this.svrport = gbr.Variablevalid(svrport) == null? 8000 : svrport
         this.sockets = [];
+        
+
+        this.gpsOptions = {
+            'debug'                 : false, //We don't want to debug info automatically. We are going to log everything manually so you can check what happens everywhere
+            //'host'                  : 'isense.westeurope.cloudapp.azure.com',// '40.115.55.149',
+            'port'                  : 8081,
+            'device_adapter'        : "TK103"
+        };
+    }
+
+    TcpGpsTrack() {
+
+        let server = gps.server(this.gpsOptions,(device: any ,connection: any) => {
+
+            device.on("connected",function(data: any){
+        
+                console.log("I'm a new device connected" + ` ${data}`);
+                return data;
+        
+            });
+        
+            device.on("login_request",function(device_id: any,msg_parts:string){
+        
+                console.log('Hey! I want to start transmiting my position. Please accept me. My name is '+device_id);
+        
+                device.login_authorized(true); 
+        
+                console.log("Ok, "+device_id+", you're accepted!");
+        
+            });
+            
+        
+            device.on("ping", (data: any) => {
+                //this = device
+                console.log("I'm here: "+data.latitude+", "+data.longitude+" ("+device.getUID()+")");
+        
+                //Look what informations the device sends to you (maybe velocity, gas level, etc)
+                //console.log(data);
+                return data;
+        
+            });
+        
+           device.on("alarm",function(alarm_code:any,alarm_data: any,msg_data:any){
+                console.log("Help! Something happend: "+alarm_code+" ("+alarm_data.msg+")");
+            }); 
+        
+            //Also, you can listen on the native connection object
+            connection.on('data', (data:any) => {
+                //echo raw data package
+                console.log(data.toString()); 
+            })
+        
+        });
 
     }
 
-    TcpServer(): void {
+    TcpClientTK103(): void {
+
+        let client = new net.Socket(),
+            HOST = this.gpsOptions.host, PORT = this.gpsOptions.port;
+
+        client.connect(PORT, HOST, function() {
+            console.log('Client connected to: ' + HOST + ':' + PORT);
+            // Write a message to the socket as soon as the client is connected, the server will receive it as message from the client 
+            client.write('(009205906401BP05000009205906401190629A2321.5726N08518.8931E000.01027100.000001000000L076864EE)');
+         
+        });
+         
+        client.on('data', function(data:any) {    
+            console.log('Client received: ' + data);
+            let ival = 10000
+            setInterval(() => {
+                
+                console.log(`Client writing interval: ${ival}` + data);
+                client.write('(009205906401BR00190629A2321.5729N08518.8934E000.01033420.000001000007L076864EE)');
+            }, ival)
+            if (data.toString().endsWith('exit')) {
+                client.destroy();
+            }
+        });
+         
+        // Add a 'close' event handler for the client socket
+        client.on('close', function() {
+            console.log('Client closed');
+        });
+         
+        client.on('error', function(err:any) {
+            console.error(err);
+        });
+    }
+
+    TcpServertk102(): void {
 
         this.server = require('tk102')
         // start server 
@@ -123,6 +213,10 @@ class TcpSocketServer {
     }
 
 
-}
 
-export default new TcpSocketServer()
+
+}
+let tcpsock = new TcpSocketServer()
+// tcpsock.TcpGpsTrack()
+
+export default tcpsock

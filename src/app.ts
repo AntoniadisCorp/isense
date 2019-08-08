@@ -19,9 +19,11 @@ import passport from 'passport'
 import session from 'express-session'
 
 // , flash    = require('connect-flash')
-// , HOST = 'localhost' //prokopis.hopto.org
+// , HOST = 'localhost' // prokopis.hopto.org
 
-
+/* 
+    Server Node Isense Application
+*/
 class Server {
 
     // Server express Application
@@ -67,6 +69,7 @@ class Server {
         // this.PORT = 'production' == this.env ? process.env.OPENSHIFT_NODEJS_PORT || this.PORT : this.PORT
         this.PORT = process.env.PORT || this.PORT
         this.IP = process.env.IP || 'localhost'
+
         this.mainServe()
     }
 
@@ -80,14 +83,15 @@ class Server {
     private mainServe (): void {
         
         // View Engine
+        console.log(__dirname)
         this.app.use(favicon(fpath.join(__dirname + '/favicon.ico')))
 
-        // Set Static Folder dist production
-        this.app.use(express.static(fpath.join(__dirname + '/dist')))
+        // Set Static Folder .well-known production
+        // this.app.use(express.static(fpath.join(__dirname, '../','.well-known')))
 
         this.app.set('views', express.static(fpath.join(__dirname + '/views')))
         // this.app.use('/scripts', express.static(fpath.join(__dirname + '/public/node_modules')))
-        // this.app.set('view engine', 'ejs')
+        this.app.set('view engine', 'html')
 
         // app.engine('html', require('ejs').renderFile)
 
@@ -119,13 +123,13 @@ class Server {
 
         })
 
-        /* this.app.all('*',  (req:Request, res:Response, next: NextFunction) => {
+        /* this.app.use( (req:Request, res:Response, next: NextFunction) => { // app.all('*')
 
             var schema = (req.headers['x-forwarded-proto'] || 'none');
             
             if ( req.hostname != 'localhost' && schema != 'https' ) {
         
-                res.set('x-forwarded-proto', 'https');
+                // res.set('x-forwarded-proto', 'https');
                 // res.redirect('https://' + req.get('host') + req.url);
         
             } else {
@@ -141,11 +145,11 @@ class Server {
         
             // Cookies that have been signed
             console.log('Signed Cookies: ', req.signedCookies)
-            console.log('session Cookies: ', req.session)
+            // console.log('session Cookies: ', req.session)
         
             
-        })
- */
+        }) */
+
 
         // USE ROUTES
         this.app.use('/', this.routeObject.router)
@@ -182,6 +186,5 @@ class Server {
 
 }
 
-// this.app.listen(PORT, () => console.log('Server Running on %s:%s'/* , HOST */, PORT));
 
 export default new Server()

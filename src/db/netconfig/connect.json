@@ -1,0 +1,35 @@
+[{
+    "_comment": "// Atlas Cloud Pure Mongo DB v3",
+    "dbname": "dbsense",
+    "mongoUri": "mongodb+srv://pant:pant@safecarcluster-sezgl.azure.mongodb.net",
+    "mongoCFG": {
+        "useNewUrlParser": true,
+        "ssl": true,
+        "replicaSet": "SafeCarCluster-shard-0",
+        "authSource":"admin",
+        "retryWrites":true
+    }
+}, { 
+    "_comment": "// mLab Mongo DB",
+    "dbname": "car_brand",
+    "mongoUri": "mongodb://antoniadis:2a4b6c!8@ds161069.mlab.com:61069",
+    "mongoCFG": {
+        "useNewUrlParser": true
+    }
+}, {
+    "_comment": "// Clever-Cloud Mongo DB",
+    "dbname": "brghyzdzarocacc",
+    "mongoUri": "mongodb://ucrabeksjkigvz9:lijaIRixg4xgEZrBMPKj@brghyzdzarocacc-mongodb.services.clever-cloud.com:27017",
+    "mongoCFG": {
+        "useNewUrlParser": true,
+        "ssl": true
+    }
+}, {
+    "_comment": "// Azure Cosmos DB account",
+    "dbname": "dbsense",
+    "mongoUri": "mongodb://dbsense:4uaeC4wjgZ8BKiNpZStNxFLdCCmIOYHNzTucx7rwASuA86T5iy2HsCWB3bFwpq47Fq7dmYykVixF7dUg3USuxA%3D%3D@dbsense.documents.azure.com:10255",
+    "mongoCFG": {
+        "useNewUrlParser": true,
+        "ssl": true
+    }
+}]
