@@ -1,13 +1,14 @@
 import express, {Request,Response,NextFunction, Router} from 'express'
-import { Emailer, GBRoutines } from '../global'
+import { Emailer, GBRoutines, debug } from '../global'
 import {machineId, machineIdSync} from 'node-machine-id';
 
 // import { mainRouter } from './'
 import { authfun as auth } from './auth'
 import { DB, jdb } from '../db/net'
 import { ICategory, Category } from '../db/models'
-import { Mongoose, mongo } from 'mongoose';
+/* import { Mongoose, mongo } from 'mongoose'; */
 import { ObjectID, ObjectId } from 'bson';
+import { Collection } from 'mongodb';
 let device = require('express-device')
 let gbr = new GBRoutines();
 
@@ -48,10 +49,9 @@ class Tasks {
             res.send(d)
           })
         
-        this.router.get('/categories', this.getasks); // Get All Tasks
-        this.router.get('/categories/search', this.searchtasks); // Search All Categories
-        this.router.get('/:id', this.singletask); // Get Single task
-        // this.router.get('/init/:id', auth, this.initializeUnit); // Send Begin SMS to the device
+        this.router.get('/categories', this.getTasks); // Get All Tasks
+        this.router.get('/categories/search', this.SearchTasks); // Search All Categories
+        this.router.get('/:id', this.OneTask); // Get Single task
     }
 
     /**
@@ -92,39 +92,45 @@ class Tasks {
 
     // if the user is authenticated redirect to home
     // ---------- https Functions ToDo ----------
-    getasks(req:Request, res:Response, next:NextFunction) {
+    getTasks(req:Request, res:Response, next:NextFunction) {
         
-        DB.Models['Category'].find({recyclebin: false}, (err:any, tasks: any) => {
+        let dbCollection: Collection = DB.getCollection('category');
+        dbCollection.find({recyclebin: false}).limit(100).toArray((err:any, categories: any) => {
 
             if (err) res.status(500).json(err)
-            res.status(200).json(gbr.getNestedChildren(tasks));
-        }).limit(1000);
+            if (debug.explain) console.log(categories)
+            res.status(200).json(gbr.getNestedChildren(categories));
+        });
+        
     }
 
-    searchtasks(req: Request, res: Response, next: NextFunction) {
+    SearchTasks(req: Request, res: Response, next: NextFunction) {
 
+        
         let sterm = req.query
 
         const regex = new RegExp(gbr.escapeRegex(sterm.q), 'gi');
-        DB.Models['Category']
-            .find(
-                {"name": {$regex: regex}, recyclebin: false},
+        let dbCollection:Collection = DB.getCollection('category');
+
+        dbCollection.find(
+                {"name": {$regex: regex}, recyclebin: false}).limit(10).toArray(
                 (err:any, searchRes: ICategory[]) => {
                     // callback
                     if(err) {
                         console.error(err)
                         return next(err);
                     }
-                    // console.log(searchRes)
+                    if (debug.explain) console.log(searchRes)
                     res.status(200).json(searchRes)
                 }
             )
-            .sort({desc: 1}).limit(10)
     }
 
-    singletask(req:Request, res:Response, next:NextFunction) {
+    OneTask(req:Request, res:Response, next:NextFunction) {
 
-        DB.Models['Category'].findOne({ _id: new Mongoose().Types.ObjectId(req.params.id), recyclebin: false }, (err, results) => {
+        let dbCollection: Collection = DB.getCollection('category');
+
+        dbCollection.findOne({ _id: new ObjectId(req.params.id), recyclebin: false }, (err:any, results:any) => {
             if(err) {
                 return next(err);
             }
@@ -137,7 +143,7 @@ class Tasks {
         let json_obj = req.body,
         top = json_obj.parent_id.length>0? false: true,
         newobj = {
-                _id: new Mongoose().Types.ObjectId().toHexString(),
+                _id: new ObjectId().toHexString(),
                 name: json_obj.name,
                 desc: 1,
                 icon: json_obj.icon,
@@ -146,15 +152,15 @@ class Tasks {
                 top: top,
                 date_added: new Date()
             },
-        // within some class, this is called..
-        obj = new DB.Models['Category'](newobj);
-
-        obj.save((err:any) => {
-            if(err) {
-                res.status(500).json({error: err});
-            }
-            res.status(200).json({ code: 200, status: "success" });
-        });
+            dbCollection:Collection = DB.getCollection('category');
+            
+            dbCollection.save(newobj, (err:any) => {
+                    if(err) {
+                        res.status(500).json({error: err});
+                    }
+                    res.status(200).json({ code: 200, status: "success" });
+                });
+        
     }
     
     deletetask(req:Request, res:Response, next:NextFunction) {
@@ -164,7 +170,10 @@ class Tasks {
         
         if (arr.length > 0) {
             console.log(arr)
-            DB.Models['Category'].updateMany(
+            
+            let dbCollection:Collection = DB.getCollection('Category')
+            
+            dbCollection.updateMany(
                 {'_id':{'$in': arr}},
                 { $set: { recyclebin : true } },
                 (err:any) => {
@@ -174,6 +183,7 @@ class Tasks {
                     res.status(200).json({ code: 200, status: "success" });
                 }
             )
+           
         } else { res.status(500).json({ code: 500, status: "failed" }); }
     }
     
@@ -190,7 +200,9 @@ class Tasks {
             res.json({ "error": "Bad data" });
         } else {
             console.log(req.params.id)
-            DB.Models['Product'].update({ _id: new Mongoose().Types.ObjectId(req.params.id) }, updTask, {}, function (err:any, tasks:Object) {
+            let dbCollection:Collection = DB.getCollection('product');
+
+            dbCollection.update({ _id: new ObjectId(req.params.id) }, updTask, {}, function (err:any, tasks:Object) {
                 if (err) res.send(err);
                 res.json(tasks);
             });

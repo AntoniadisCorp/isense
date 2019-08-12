@@ -6,6 +6,7 @@ import { Interface } from 'readline';
 import { Category, ICategory } from '../db/models';
 import { Mongoose } from 'mongoose';
 
+export const debug = {explain: false}
 
 /* import { compareSync, hashSync, genSaltSync } from 'bcrypt' */
 class GBRoutines {
@@ -83,7 +84,7 @@ class GBRoutines {
             let str: string;
 
             for(let i in arr) {
-                str = arr[i].parent_id? arr[i].parent_id : undefined
+                str = arr[i] && arr[i].parent_id? arr[i].parent_id : undefined
 
                 /* console.log( 'parent_id: ' + str  + `  ` + parent) */
                 if( !str && str == parent || str && str.toString() == parent ) {

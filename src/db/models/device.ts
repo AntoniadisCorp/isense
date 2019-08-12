@@ -18,7 +18,7 @@ export class Device {
             _id: { type: Schema.Types.ObjectId },
             name: { type: String, required: true },
             imei: { type: String, required: true},
-            date_added: { type: Date, default: Date.now() }
+            created: { type: Date, default: Date.now() }
         });
 
         this._model = model<IDevice>(dbCollectionName, schema, dbCollectionName);

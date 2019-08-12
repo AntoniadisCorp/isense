@@ -4,8 +4,8 @@
   "description": "",
   "main": "isense.js",
   "scripts": {
-    "start": "node src/isense.ts",
-    "dev": "nodemon src/isense.ts",
+    "start": "node src/bin/isense.ts",
+    "dev": "nodemon src/bin/isense.ts",
     "build": "tsc -p ."
   },
   "author": "",

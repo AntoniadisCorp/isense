@@ -3,43 +3,62 @@
 /**
  * Module dependencies.
  */
+import serve from '../app'
+import https  from 'http'
+import fs from 'fs'
+import { normalize } from 'path';
 
-var fs = require('fs');
+// var debug = require('debug')('technica:server');
 
-var app   = require('../app');
-var debug = require('debug')('technicalprb:server');
-var https  = require('http');
+var enforce = require('express-sslify')
+// , key = fs.readFileSync('server-key.pem')
+// , cert = fs.readFileSync('server-crt.pem')
+// , pfx = fs.readFileSync('smartdeep.io.pfx')
+/* , options = {
+  key: key,
+  cert: cert, */
+ /*   pfx,
+    passphrase: 'For(Life#0)'
+  
+    ca: fsx.readFileSync('ca-crt.pem'),
+    crl: fsx.readFileSync('ca-crl.pem'), 
+    requestCert: true, 
+    rejectUnauthorized: true 
+}*/ 
 
 
-//http.globalAgent.maxSockets = 100;
+// http.globalAgent.maxSockets = 100;
 
 /**
  * Get port from environment and store in Express.
  */
-var port = normalizePort(process.env.PORT || '3000');
-app.set('port', port);
+var port = normalizePort(serve.PORT.toString()),
+    ip = serve.IP.toString();
+serve.app.set('port', port);
+serve.app.set('ip', ip);
 
 
 /**
  * Create HTTPS server.
  */
-var server = https.createServer(app);
-
-
+// for https
+serve.app.use(enforce.HTTPS({ trustProtoHeader: true }))
+let server = https.createServer(/* options */serve.app);
 
 /**
  * Listen on provided port, on all network interfaces.
  */
-server.listen(port);
+server.listen(port, onListen);
 server.on('error', onError);
 server.on('listening', onListening);
 
 
-// This is for socket.io
-// var io = app.io
-// io.attach( server );
-
-
+// set up socket.io and bind it to our
+// http server.
+let io = serve.socketio
+// whenever a user connects on port 3000 via
+// a websocket, log that a user has connected
+io( server );
 
 
 /**
@@ -53,10 +72,16 @@ function normalizePort(val: string) {
   return false;
 }
 
+function onListen() {
+
+  console.log('Server Running on %s:%s', ip, port)
+  return ip
+}
+
 /**
  * Event listener for HTTP server "error" event.
  */
-function onError(error: any) {
+function onError(error:any) {
   if (error.syscall !== 'listen') {
     throw error;
   }
@@ -84,10 +109,10 @@ function onError(error: any) {
  * Event listener for HTTP server "listening" event.
  */
 function onListening() {
-  var addr = server.address();
-  var bind = typeof addr === 'string'
+  let addr = server.address();
+  let bind = typeof addr === 'string'
     ? 'pipe ' + addr
-    : 'port ' + addr.port;
-  debug('Listening on ' + bind);
+    : 'port ' + (addr? addr.port: null);
+  // debug('Listening on ' + bind);
 }
 console.log('HTTPS Server listening on %s'/* , HOST */, port)

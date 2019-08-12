@@ -1,11 +1,3 @@
-58.00
-125
-125
-3
-44
-
-393
-
 https://creately.com/app/?tempID=i9ukyigg1&login_type=demo#
 https://creately.com/app/?tempID=huvdo5i22&login_type=demo#
 
@@ -221,6 +213,17 @@ brandLogo,image
 //[field name], [field type], [optional: Primary or Foreign key indicator - PK or FK (any case)]
 //index line format
 //[index name], [fields making it up] - there can be multiple fields making up an index
+
+Store
+_
+_id pk
+category Array _ids
+location Array {}
+baselocation _id, (_id adresss name, number, tk number, region, city)
+website string
+number object {"static","mobile","fax")
+PayType object {pay1: , pay2, pay3} αντικαταβολή Πιστωτική κάρτα, κατάθεση
+product_id Arrays of ids
 
 Delivery
 --

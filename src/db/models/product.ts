@@ -8,8 +8,8 @@ export declare interface IProduct extends Document {
     price: number,
     stock_id: string,
     Rating: number,  
-    date_added: Date;
-    date_modified: Date;
+    created: Date;
+    modified: Date;
 }
 
 export interface ProductModel extends Model<IProduct> {};
@@ -23,12 +23,12 @@ export class Product {
             _id: { type: Schema.Types.ObjectId, required: true },
             brandName: { type: String, required: true },
             productName: { type: String, required: true },
-            desc: { type: String, required: true },
+            Desc: { type: String, reqired: true},
             price: { type: Number, required: true },
             stock_id: { type: String, required: true },
-            Rating:  { type: Number, required: true },
-            date_added: { type: Date, default: Date.now() },
-            date_modified: { type: Date }
+            rating:  { type: Number, required: true },
+            created: { type: Date, default: Date.now() },
+            modified: { type: Date }
         });
 
         this._model = model<IProduct>(dbCollectionName, schema, dbCollectionName);
