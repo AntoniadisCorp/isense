@@ -84,7 +84,8 @@ class Server {
         
         // View Engine
         console.log(__dirname)
-        this.app.use(favicon(fpath.join(__dirname + '/favicon.ico')))
+        this.app.use(express.static(fpath.join(__dirname + '/public')))
+        this.app.use(favicon(fpath.join(__dirname + '/public/favicon.ico')))
 
         // Set Static Folder .well-known production
         // this.app.use(express.static(fpath.join(__dirname, '../','.well-known')))

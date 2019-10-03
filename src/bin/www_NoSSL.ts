@@ -7,6 +7,7 @@ import serve from '../app'
 import https  from 'http'
 import fs from 'fs'
 import { normalize } from 'path';
+import { DB } from '../db';
 
 // var debug = require('debug')('technica:server');
 
@@ -44,6 +45,23 @@ serve.app.set('ip', ip);
 // for https
 serve.app.use(enforce.HTTPS({ trustProtoHeader: true }))
 let server = https.createServer(/* options */serve.app);
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+let onListening = async () => {
+ 
+  let addr = server.address();
+  let bind = typeof addr === 'string'
+    ? 'pipe ' + addr
+    : 'port ' + (addr? addr.port: null);
+    try {
+      await DB.connect();
+    } catch (err) {
+      console.error(`Unable to connect to Mongo!`, err);
+    }
+  // debug('Listening on ' + bind);
+}
 
 /**
  * Listen on provided port, on all network interfaces.
@@ -105,14 +123,4 @@ function onError(error:any) {
   }
 }
 
-/**
- * Event listener for HTTP server "listening" event.
- */
-function onListening() {
-  let addr = server.address();
-  let bind = typeof addr === 'string'
-    ? 'pipe ' + addr
-    : 'port ' + (addr? addr.port: null);
-  // debug('Listening on ' + bind);
-}
 console.log('HTTPS Server listening on %s'/* , HOST */, port)
