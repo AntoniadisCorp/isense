@@ -22,11 +22,15 @@ class mainRouter {
 
     httpRoutesGets(): void {
 
-        this.router.get('/login', this.LoginPageCheck) // get login
-        this.router.get('/', (req:Request, res:Response) => {
-            let d = {  message: 'Hello World!' }
+        this.router.get('/ServiceLogin', this.ServiceLogin) // get ServiceLogin
+
+        this.router.get('/', async (req:Request, res:Response) => {
+            let d = {  message: 'Hello World!', sessionInfo: '' }
+            if (req.session && req.session!.key) { 
+                d = {  message: 'Hello Redis World!', sessionInfo: req.session!.key, }
+            }
             console.log(d.message)
-            res.send(d)
+            res.render('index',d)
           })
     }
 
@@ -40,26 +44,22 @@ class mainRouter {
     }
 
     /**
-     * https Router Delete
-     */
-
-    httpRoutesDelete(): void {}
-
-    /**
      * https Router Put
      */
 
     httpRoutesPut(): void {}
 
     /**
+     * https Router Delete
+     */
+
+    httpRoutesDelete(): void {}
+
+    /**
      * Router Functions
      */
 
     // if the user is authenticated redirect to home
-    LoginPageCheck(req: Request, res: Response, next: NextFunction) {
-        if (req.isAuthenticated()) res.redirect('/')
-        else res.json({pol: 'rest'})
-    }
 
     // const options = {
     //     host: 'somesite.com',
@@ -70,6 +70,11 @@ class mainRouter {
     //       'Content-Type': 'application/json'
     //     }
     //   }
+
+    async ServiceLogin (req: Request, res: Response, next: NextFunction) { 
+        if (req.isAuthenticated()) res.redirect('/')
+        res.render('signin')
+    }
 
 
 

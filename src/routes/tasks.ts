@@ -1,14 +1,14 @@
 import express, {Request,Response,NextFunction, Router} from 'express'
-import { Emailer, GBRoutines, debug } from '../global'
+import { Emailer, GBRoutines, debug, isAuth, isJwtAuth } from '../global'
 import {machineId, machineIdSync} from 'node-machine-id';
 
 // import { mainRouter } from './'
-import { authfun as auth } from './auth'
-import { DB, jdb } from '../db/net'
+import { DB, jdb, MemCache } from '../db/net'
 import { ICategory, Category } from '../db/models'
 /* import { Mongoose, mongo } from 'mongoose'; */
-import { ObjectID, ObjectId } from 'bson';
+import { ObjectId } from 'bson';
 import { Collection } from 'mongodb';
+
 let device = require('express-device')
 let gbr = new GBRoutines();
 
@@ -44,10 +44,40 @@ class Tasks {
     httpRoutesGets(): void {
 
         this.router.get('/', (req:Request, res:Response) => {
-            let d = {  tasks: 'Task 1!' }
-            console.log(d.tasks)
-            res.send(d)
+            let tasks = {  tArr: ['Task page 0!'] }
+            console.log(tasks.tArr)
+            res.send(tasks)
           })
+
+          this.router.get('/jobs', function (req:Request, res:Response) {
+            let jobs: any = [], jkeys: any = []
+            const client = new MemCache().connect(15000).cb
+            
+            client.keys('*', function (err:any, keys:any) {
+                if (err) return console.log(err);
+
+                jkeys.push(keys[1])
+                console.log(keys)
+            })
+
+            let sessionID :string = `${'sess:' + req.sessionID}`
+            console.log(sessionID)
+            client.get(sessionID, function (error:any, value: any) {
+                if (error) return res.send(error);
+
+                    let job = { key: value };
+                    jobs.push(job)
+                    console.log(value)
+                    res.json(jobs)
+            })
+            
+           })
+
+        
+        // We plugin our jwt strategy as a middleware so only verified users can access this route
+        this.router.get('/random',  isJwtAuth, (req:Request, res:Response) => {
+            res.json({value: Math.floor(Math.random()*100) });
+        })
         
         this.router.get('/categories', this.getTasks); // Get All Tasks
         this.router.get('/categories/search', this.SearchTasks); // Search All Categories
@@ -81,7 +111,7 @@ class Tasks {
 
     httpRoutesPut(): void {
 
-        this.router.put('/:id', auth, this.updatetask); // Update task
+        this.router.put('/:id', this.updatetask); // Update task
         // this.router.put('/resetpass/:id', auth, this.resetpassword); // update password of the device
 
     }
@@ -92,16 +122,26 @@ class Tasks {
 
     // if the user is authenticated redirect to home
     // ---------- https Functions ToDo ----------
-    getTasks(req:Request, res:Response, next:NextFunction) {
+    async getTasks(req:Request, res:Response, next:NextFunction) {
         
-        let dbCollection: Collection = DB.getCollection('category');
-        dbCollection.find({recyclebin: false}).limit(100).toArray((err:any, categories: any) => {
+        try {
+            if (!DB.isConnected()) { // trying to reconnect
+                await DB.connect();
+            } else{
 
-            if (err) res.status(500).json(err)
-            if (debug.explain) console.log(categories)
-            res.status(200).json(gbr.getNestedChildren(categories));
-        });
+                let dbCollection: Collection = DB.getCollection('category');
+
+                dbCollection.find({recyclebin: false}).limit(100).toArray((err:any, categories: any) => {
         
+                    if (err) res.status(500).json(err)
+                    if (debug.explain) console.log(categories)
+                    res.status(200).json(gbr.getNestedChildren(categories));
+                });
+            }
+        }
+        catch(error) {
+            console.error(`Unable to connect to Mongo!`, error);
+        }
     }
 
     SearchTasks(req: Request, res: Response, next: NextFunction) {

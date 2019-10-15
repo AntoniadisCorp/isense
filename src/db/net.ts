@@ -6,20 +6,29 @@
 /* import { connect, connection, Connection, set } from 'mongoose'; */
 import { MongoClient, connect, MongoClientOptions, Collection, Db, MongoError } from 'mongodb';
 import jdb from './netconfig/connect.json'
+import memjs from './netconfig/connectRedis.json';
+
 import { Device, DeviceModel, Category, Cate_prod, 
     CategoryModel, Cate_prodModel, Product, ProductModel } from './models'
 import assert = require('assert');
 
 let dbArray: Array<string> = [ 'Atlas', 'mLab', 'Clever', 'Azure' ]
+let memArray: Array<string> = [ 'RedisCache' ];
 
-// db Name, and index
-let dbjsonIndex = dbArray.indexOf('Atlas'),
-dbName = jdb[dbjsonIndex].dbname
+// MongoDb db Name, JSON file indexing
+const dbjsonIndex = dbArray.indexOf('Atlas'),
+dbobj = jdb[dbjsonIndex],
+dbName = dbobj.dbname,
+
+// Redis Cloud JSON file Indexing
+memjsonIndexOf = (memArray: Array<string>, RedisIndex: any) => memArray.indexOf(RedisIndex),
+memobj = memjs[memjsonIndexOf(memArray, 'RedisCache')]
+
 
 export const mongoUri = jdb[dbjsonIndex].mongoUri + '/' + dbName,
              mongoCFG = jdb[dbjsonIndex].mongoCFG
 
-console.log(dbName)
+console.log(`Trying connect to ... ${dbName} at ${dbobj._common}`)
 
 
 
@@ -113,5 +122,64 @@ class DB {
         console.log('Map Reduce Running...: ', res)
     }
   ) */
+
+/**
+ *  Redis, Kafka, and other kind of Db caching..  
+ *  
+ **/
+
+import { RedisClientOptions } from './serverconfig/serverOptions';
+import redis from 'redis';
+import { isNumber } from 'util';
+
+interface MemCacheConnectStatus {
+  status: string;
+  cb: redis.RedisClient;
+  message?: string;
+}
+class MemCache {
+
+  private client!: redis.RedisClient;
+
+  constructor() {}
+
+  public connect(reconnectAfter?: number, options?: redis.ClientOpts): MemCacheConnectStatus {
+
+    console.log(`Trying connect to ... ${memobj.dbname} at ${memobj._comment}`)
+
+    
+    // DataBase Redis for MiddleWare Caching
+    this.client = redis.createClient(options? options : 
+      RedisClientOptions(memobj.host, memobj.port, memobj.password));
+
+    this.client.on('connect', () => {
+      console.log('Redis connected!', memobj._subscription)
+    })
+
+    process.on('exit', () => {
+
+      this.client.quit()
+    });
+
+    process.on('SIGINT', () => {
+
+      this.client.quit()
+      console.log('Redis client quit');
+  });
+
+    this.client.on('error', (error) => {
+      console.log((new Date()) + 'Redis: disconnected!', error)
+
+      // case reconnect after set
+      if (isNumber(reconnectAfter) && reconnectAfter>0) {
+
+        setTimeout( this.connect, reconnectAfter );
+      } else return { status: 'error', cb: undefined, message: `${error}` }
+      
+    })
+
+    return { status: 'ok', cb: this.client } 
+  }
+}
   
-export { DB, jdb }
+export { DB, MemCache, memjs, memjsonIndexOf, jdb }

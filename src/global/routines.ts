@@ -2,13 +2,13 @@ import { Response } from 'express'
 import useragent from 'express-useragent'
 import { utype } from './datamodel'
 import { isString, isArray } from 'util';
-import { Interface } from 'readline';
 import { Category, ICategory } from '../db/models';
 import { Mongoose } from 'mongoose';
 
 export const debug = {explain: false}
 
-/* import { compareSync, hashSync, genSaltSync } from 'bcrypt' */
+import bcrypt from 'bcrypt'
+
 class GBRoutines {
 
         // private version: string
@@ -17,6 +17,8 @@ class GBRoutines {
         //     this.version = version
         // }
         // public GBRoutines(): void {}
+
+        
         public generateUUID (version: string): string {
 
             switch (version) {
@@ -25,7 +27,11 @@ class GBRoutines {
                     return uuidv1()
                     break
                 case 'random':
-                    const uuidv4 = require('uuid/v5')
+                    const uuidv5_ = require('uuid/v5')
+                    return uuidv5_()
+                    break
+                case 'UUID':
+                    const uuidv4 = require('uuid/v4')
                     return uuidv4()
                     break
                 default:
@@ -63,21 +69,24 @@ class GBRoutines {
 
         /* -------------------------- passport Strategy -------------------------- */
         // Compares hashed passwords using bCrypt
-        public isValidPassword(user:utype, password:string) {
+        //We'll use this later on to make sure that the user trying to log in has the correct credentials
+        public isValidPassword(user:utype, password:string): boolean {
             
-            return /* compareSync(password, user.password) */ ''
+            //Hashes the password sent by the user for login and checks if the hashed password stored in the 
+            //database matches the one sent. Returns true if it does else false.
+            return bcrypt.compareSync(password, user.password)
         }
 
         // Generates hash using bCrypt
         public createHash(password: string) {
-
-            return /* hashSync(password, genSaltSync(10)) */ ''
+            return bcrypt.hashSync(password, bcrypt.genSaltSync(10));
         }
 
         public Variablevalid(s: any) {
 
             return s && (isString(s) || isArray(s)) && s.length > 0 ? s : null
         }
+        
 
         public getNestedChildren = (arr: Array<any>, parent?: string) => {
             let out: Array<any> = []

@@ -1,0 +1,10 @@
+<p><b><%= user.username %></b> is requesting <b>full access</b> to your account.</p>
+<p>Do you approve?</p>
+
+<form action="/auth/v2/authorize" method="post">
+    <input name="transaction_id" type="hidden" value="<%= transactionId %>">
+    <div>
+    <input type="submit" value="Allow" id="allow">
+    <input type="submit" value="Deny" name="cancel" id="deny">
+    </div>
+</form>
