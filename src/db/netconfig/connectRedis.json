@@ -1,15 +1,28 @@
 [
-    {
-        "_comment": "// Redis Labs Cloud --- address: https://app.redislabs.com/#/bdbs",
-        "_subscription": {
-            "_id": "#1001880",
-            "protocol": "Redis",
-            "description": "Essentials/AWS/us-east-1/Standard/30MB",
-            "endpoint": "redis-12853.c73.us-east-1-2.ec2.cloud.redislabs.com:12853"
-        },
-        "dbname": "RedisCache",
-        "host": "redis-12853.c73.us-east-1-2.ec2.cloud.redislabs.com",
-        "port": 12853,
-        "password": "AQW7LospEqeKrPDsjtbLKBHsyOS95hFO"
-    }
+  {
+    "_comment": "// Redis Labs Cloud --- address: https://app.redislabs.com/#/bdbs",
+    "_subscription": {
+      "_id": "#1001880",
+      "protocol": "Redis",
+      "description": "Essentials/AWS/us-east-1/Standard/30MB",
+      "endpoint": "redis-12853.c73.us-east-1-2.ec2.cloud.redislabs.com:12853"
+    },
+    "dbname": "RedisCache",
+    "host": "redis-12853.c73.us-east-1-2.ec2.cloud.redislabs.com",
+    "port": 12853,
+    "password": "AQW7LospEqeKrPDsjtbLKBHsyOS95hFO"
+  },
+  {
+    "_comment": "// Local Redis Lab ---",
+    "_subscription": {
+      "_id": "#1001880",
+      "protocol": "Redis",
+      "description": "Essentials/AWS/us-east-1/Standard/30MB",
+      "endpoint": ""
+    },
+    "dbname": "RedisCache",
+    "host": "localhost",
+    "port": 6379,
+    "password": "AQW7LospEqeKrPDsjtbLKBHsyOS95hFO"
+  }
 ]

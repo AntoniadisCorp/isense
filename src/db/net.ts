@@ -12,17 +12,17 @@ import { Device, DeviceModel, Category, Cate_prod,
     CategoryModel, Cate_prodModel, Product, ProductModel } from './models'
 import assert = require('assert');
 
-let dbArray: Array<string> = [ 'Atlas', 'mLab', 'Clever', 'Azure' ]
-let memArray: Array<string> = [ 'RedisCache' ];
-
+let dbArray: Array<string> = [ 'local', 'Atlas', 'mLab', 'Clever', 'Azure' ]
+let memArray: Array<string> = [ 'RedisCache', 'local' ];
+const local = 'local'
 // MongoDb db Name, JSON file indexing
-const dbjsonIndex = dbArray.indexOf('Atlas'),
+const dbjsonIndex = dbArray.indexOf(local),
 dbobj = jdb[dbjsonIndex],
 dbName = dbobj.dbname,
 
 // Redis Cloud JSON file Indexing
 memjsonIndexOf = (memArray: Array<string>, RedisIndex: any) => memArray.indexOf(RedisIndex),
-memobj = memjs[memjsonIndexOf(memArray, 'RedisCache')]
+memobj = memjs[memjsonIndexOf(memArray, local)]
 
 
 export const mongoUri = jdb[dbjsonIndex].mongoUri + '/' + dbName,
@@ -159,13 +159,15 @@ class MemCache {
     process.on('exit', () => {
 
       this.client.quit()
+      process.exit(200)
     });
 
     process.on('SIGINT', () => {
 
       this.client.quit()
       console.log('Redis client quit');
-  });
+      process.exit(200)
+    });
 
     this.client.on('error', (error) => {
       console.log((new Date()) + 'Redis: disconnected!', error)

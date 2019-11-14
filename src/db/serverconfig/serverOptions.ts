@@ -20,7 +20,7 @@ export let NodeSetSessionOptions = (secret: string, genid: string, store: RedisS
     }
 }
 
-export let RedisClientOptions = (host: string, port: number, password: string): object => {
+export let RedisClientOptions = (host: string, port: number, password?: string): object => {
     return  {
         port,               // replace with your port
         host,        // replace with your hostanme or IP address

@@ -4,7 +4,7 @@ import fpath from 'path'
 import socketio from 'socket.io'
 
 // GLOBAL FUNCTIONS
-import { Sockets, GBRoutines } from './global'
+import { Sockets, GBRoutines, gbr } from './global'
 
 // APP ROUTES
 import { mainRouter, Tasks, Auth }  from './routes'
@@ -22,11 +22,11 @@ import connect_redis from 'connect-redis'
 
 import { NodeSetSessionOptions } from './db/serverconfig/serverOptions'
 import { MemCache, memjs } from './db'
+import fileUpload from 'express-fileupload'
 
 // attach session to RedisStore
 const RedisStore = connect_redis(session),
-      helmet  = require('helmet');
-
+      helmet  = require('helmet')
 
 
 
@@ -49,10 +49,9 @@ class Server {
     public IP: string
 
     //create classes routes, routines
-    private gbObject: GBRoutines = new GBRoutines()
-    private routeObject: mainRouter = new mainRouter()
-    private taskObject: Tasks = new Tasks()
-    private authObject: Auth = new Auth(passport)
+    private routeObject: mainRouter
+    private taskObject: Tasks;
+    private authObject: Auth;
 
     
     // Session Options - have a uniqueId
@@ -68,13 +67,18 @@ class Server {
         // Create Express Application
         this.app = express()
 
+        // Routes Objects
+        this.routeObject = new mainRouter()
+        this.authObject = new Auth(passport)        
+        this.taskObject = new Tasks()
+
         // Create Server Socket IO
         this.socketio = this.sockattach
 
         // Redis Session Store
         this.sessionOptions = NodeSetSessionOptions(
                 'keyboard cat',
-                this.gbObject.generateUUID('UUID'), 
+                gbr.generateUUID('UUID'), 
                 new RedisStore({ 
                 host: memjs[0].host,
                 port: memjs[0].port, 
@@ -98,8 +102,9 @@ class Server {
   
     private mainServe (): void {
         
-        // View Engine
-        
+        // Express File uploading
+        this.app.use(fileUpload());
+        // View Engine        
         this.app.use(express.static(fpath.join(__dirname, 'public')))
         this.app.use(favicon(fpath.join(__dirname, 'public', 'favicon.ico')))
 

@@ -40,14 +40,14 @@ const BearerStrategy = require('passport-http-bearer'),
 class Auth {
     
     public router: Router
-    private passport: PassportStatic
+    // private passport: any
     // private newUser: User
 
 
-    constructor (passport: PassportStatic) {
+    constructor (passport: any) {
 
         this.router = express.Router()
-        this.passport = passport
+
         // Auth2.getInstance().StartServerAuth2orize()
 
         // this.newUser = new User()
@@ -65,7 +65,7 @@ class Auth {
 
     httpRoutesGets(): void {
 
-        this.router.get('/v2/authorize', Auth2.getAutorization())
+        // this.router.get('/v2/authorize', Auth2.instance.authorization())
     }
 
     /**
@@ -87,8 +87,8 @@ class Auth {
         this.router.post('/refresh', this.RefreshTokenfun)
 
         // Authorization v2 server
-        this.router.post('/v2/authorize', Auth2.getDecision())
-        this.router.post('/v2/token', isAuth, Auth2.getToken())
+        // this.router.post('/v2/authorize', Auth2.instance.decision())
+        // this.router.post('/v2/token', isAuth, Auth2.instance.token())
         
         this.router.post('/signin', this.signin)
         this.router.post('/signout', this.signout)
@@ -115,17 +115,17 @@ class Auth {
     private InitPassport (): void {
 
 
-        this.passport.serializeUser((user: any, done) => {
+        passport.serializeUser((user: any, done: any) => {
             console.log(`serializeUser: ${JSON.stringify(user._id)}` );
             done(null, user._id)
         })
         
-        this.passport.deserializeUser((_id, done) => {
+        passport.deserializeUser((_id: any, done: any) => {
             console.log(`deserializeUser: ${JSON.stringify(_id)}` );
             done(null, _id)
         })
                 
-        this.passport.use('login', new LocalStrategy(/* {
+        passport.use('login', new LocalStrategy(/* {
 
                 usernameField : 'username',
                 passwordField : 'password'
@@ -146,7 +146,7 @@ class Auth {
           ));
 
         //This verifies that the token sent by the user is valid
-        this.passport.use(new JwtStrategy(passportOpts, async (jwtPayload, done) => {
+        passport.use(new JwtStrategy(passportOpts, async (jwtPayload, done) => {
 
             try {
                 console.log('payload received', jwtPayload);
@@ -167,7 +167,7 @@ class Auth {
             }
           }))
             
-        this.passport.use('signup', new LocalStrategy({ 
+        passport.use('signup', new LocalStrategy({ 
             
                 passReqToCallback: true,
                 usernameField : 'username',
@@ -279,7 +279,7 @@ class Auth {
      **/ 
     async signup(req: Request, res:Response, next: NextFunction) {
 
-        this.passport.authenticate('signup', { session: false },
+        passport.authenticate('signup', { session: false },
             async (err: any, user: { username: string }, info: { message: string }) => {
 
           if (err || !user) {
@@ -478,25 +478,25 @@ class Auth {
         }
     
         this.router.get('/auth/facebook',
-            this.passport.authenticate('facebook'))
+            passport.authenticate('facebook'))
 
         this.router.get('/auth/facebook/callback',
-            this.passport.authenticate('facebook', authOption), successCallback)
+            passport.authenticate('facebook', authOption), successCallback)
     
         this.router.get('/auth/twitter',
-            this.passport.authenticate('twitter'))
+            passport.authenticate('twitter'))
         
         this.router.get('/auth/twitter/callback',
-            this.passport.authenticate('twitter', authOption))
+            passport.authenticate('twitter', authOption))
     
         this.router.get('/auth/google',
-            this.passport.authenticate('google', {
+            passport.authenticate('google', {
                 scope:
                     ['https://www.googleapis.com/auth/userinfo.profile']
             }))
         
         this.router.get('/auth/google/callback',
-        this.passport.authenticate('google', authOption), successCallback)
+        passport.authenticate('google', authOption), successCallback)
     }
 
 }

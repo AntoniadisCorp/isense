@@ -14,7 +14,7 @@ const oauth2orize = require('oauth2orize'),
 class Auth2 {
 
     public static server: any
-    private static instance: Auth2;
+    public static instance: Auth2;
 
     constructor() {}
 
@@ -138,22 +138,7 @@ class Auth2 {
         return Auth2.instance
     }
 
-    static getAutorization () {
-
-        return Auth2.instance.authorization()
-    }
-
-    static getDecision () {
-
-        return Auth2.instance.decision()
-    }
-
-    static getToken () {
-
-        return Auth2.instance.token()
-    }
-
-    private authorization (): RequestHandler[] {
+    public authorization (): RequestHandler[] {
 
         if (!Auth2.server) { console.log('oauth2orize not running..') }
 
@@ -195,14 +180,14 @@ class Auth2 {
         ]
     }
 
-    private decision (): RequestHandler[]  {
+    public decision (): RequestHandler[]  {
 
         return [
             Auth2.server.decision()
           ]
     }
 
-    private token (): RequestHandler[]  {
+    public token (): RequestHandler[]  {
         
         return [
             Auth2.server.token(),
