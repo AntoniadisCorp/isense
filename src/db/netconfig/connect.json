@@ -2,10 +2,11 @@
   {
     "_common": "// Local Pure Mongo DB v4.2.1",
     "dbname": "dbsense",
-    "mongoUri": "mongodb://localhost:27017/?compressors=disabled&gssapiServiceName=mongodb",
+    "mongoUri": "mongodb://localhost:27017/?compressors=zlib&gssapiServiceName=mongodb",
     "mongoCFG": {
-        "keepAlive": true, 
-        "connectTimeoutMS": 30000
+      "keepAlive": true,
+      "connectTimeoutMS": 30000,
+      "useUnifiedTopology": true
     }
   },
   {

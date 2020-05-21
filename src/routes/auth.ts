@@ -300,15 +300,15 @@ class Auth {
         // Redis Connection Closed
         Redisclient.quit();
 
-        if (req.session!.destroy) {
-            req.session!.destroy(function (err) {
-                if (err) {
-                    console.log(err);
-                } else {
-                    console.log('Redis Session Destroyed');
-                }
-            });
-        }
+        // if (req.session!.destroy) {
+        req.session!.destroy(function (err) {
+            if (err) {
+                console.log(err);
+            } else {
+                console.log('Redis Session Destroyed');
+            }
+        });
+        // }
         req.logOut();
         res.sendStatus(204);
     }

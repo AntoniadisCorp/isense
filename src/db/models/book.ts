@@ -260,7 +260,7 @@ export async function saveBookInDb(files: FileArray | undefined, reqBody: any): 
             data: { result: skuDuplicate, message: `Διπλότυπη εγγραφή με κωδικό SKU βιβλίου ${book.SKU} στη συλλογή ${reqBody.col}` }
         })
 
-    let bookWrite: InsertOneWriteOpResult = await dbCollection.insertOne(book)
+    let bookWrite: InsertOneWriteOpResult<any> = await dbCollection.insertOne(book)
 
     if (bookWrite.result && !!bookWrite.result.ok) {
 
@@ -355,7 +355,7 @@ async function upBookcaseArrIndex2(bookId: ObjectId, bookcaseId: string, bookshe
     const dbCollectionbook: Collection = DB.getCollection('bookcase')
     // {'books.arrIndex._id': ObjectId('5eb17eed3ea49331186f3fce') }
     // Remove bookId from arrIndex in Bookcase Collection
-    const bookcase: FindAndModifyWriteOpResultObject = await dbCollectionbook.findOneAndUpdate(
+    const bookcase: FindAndModifyWriteOpResultObject<any> = await dbCollectionbook.findOneAndUpdate(
         { 'books.arrIndex._id': bookId },
         {
             $pull: { 'books.arrIndex': { _id: bookId } },  // remove Item

@@ -570,7 +570,7 @@ class Tasks {
                 }
 
 
-                dbCollection.count(query)
+                dbCollection.countDocuments(query)
                     .then((count: number) => {
 
                         res.status(200).json({
