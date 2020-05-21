@@ -4,7 +4,7 @@ import { Client, Code, Token, SECRET } from "../db/models";
 import { randtoken } from "../global";
 import { Collection } from "mongodb";
 import { ObjectId } from "bson";
-import jwt from 'jsonwebtoken'
+import * as jwt from 'jsonwebtoken'
 
 // Load required packages
 const oauth2orize = require('oauth2orize'),

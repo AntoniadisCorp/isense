@@ -4,7 +4,7 @@
     "python.linting.pylintEnabled": true,
     "python.linting.enabled": true,
     "terminal.integrated.rendererType": "dom",
-    "window.zoomLevel": 0,
+    "window.zoomLevel": -1,
     "typescript.updateImportsOnFileMove.enabled": "always",
 
     // Controls if quick suggestions should show up while typing
@@ -38,5 +38,13 @@
 
     // Enable parameter hints
     "editor.parameterHints.enabled": true,
+
+    // Enable semantic Highlighting Color
+    "editor.tokenColorCustomizations": {
+        "semanticHighlighting": true
+        /* "[Material Theme]": {
+            "semanticHighlighting": true
+        } */
+    }
     
 }

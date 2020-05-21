@@ -1,0 +1,154 @@
+
+{
+  "header": {
+    "reportVersion": 1,
+    "event": "Allocation failed - JavaScript heap out of memory",
+    "trigger": "FatalError",
+    "filename": "report.20200402.150649.1992.0.001.json",
+    "dumpEventTime": "2020-04-02T15:06:49Z",
+    "dumpEventTimeStamp": "1585832809001",
+    "processId": 1992,
+    "cwd": "C:\\Users\\user\\Documents\\Projects\\isense",
+    "commandLine": [
+      "node",
+      "C:\\Users\\user\\Documents\\Projects\\isense\\node_modules\\.bin\\\\..\\ts-node\\dist\\bin.js",
+      "src/bin/www_NoSSL.ts"
+    ],
+    "nodejsVersion": "v12.13.0",
+    "wordSize": 64,
+    "arch": "x64",
+    "platform": "win32",
+    "componentVersions": {
+      "node": "12.13.0",
+      "v8": "7.7.299.13-node.12",
+      "uv": "1.32.0",
+      "zlib": "1.2.11",
+      "brotli": "1.0.7",
+      "ares": "1.15.0",
+      "modules": "72",
+      "nghttp2": "1.39.2",
+      "napi": "5",
+      "llhttp": "1.1.4",
+      "http_parser": "2.8.0",
+      "openssl": "1.1.1d",
+      "cldr": "35.1",
+      "icu": "64.2",
+      "tz": "2019a",
+      "unicode": "12.1"
+    },
+    "release": {
+      "name": "node",
+      "lts": "Erbium",
+      "headersUrl": "https://nodejs.org/download/release/v12.13.0/node-v12.13.0-headers.tar.gz",
+      "sourceUrl": "https://nodejs.org/download/release/v12.13.0/node-v12.13.0.tar.gz",
+      "libUrl": "https://nodejs.org/download/release/v12.13.0/win-x64/node.lib"
+    },
+    "osName": "Windows_NT",
+    "osRelease": "10.0.18363",
+    "osVersion": "Windows 10 Pro",
+    "osMachine": "x86_64",
+    "cpus": [
+      {
+        "model": "Intel(R) Core(TM) i7-2600 CPU @ 3.40GHz",
+        "speed": 3392,
+        "user": 6084140,
+        "nice": 0,
+        "sys": 3502468,
+        "idle": 99391078,
+        "irq": 329140
+      },
+      {
+        "model": "Intel(R) Core(TM) i7-2600 CPU @ 3.40GHz",
+        "speed": 3392,
+        "user": 4733984,
+        "nice": 0,
+        "sys": 1255890,
+        "idle": 102987593,
+        "irq": 28031
+      },
+      {
+        "model": "Intel(R) Core(TM) i7-2600 CPU @ 3.40GHz",
+        "speed": 3392,
+        "user": 11401953,
+        "nice": 0,
+        "sys": 3166531,
+        "idle": 94408968,
+        "irq": 43062
+      },
+      {
+        "model": "Intel(R) Core(TM) i7-2600 CPU @ 3.40GHz",
+        "speed": 3392,
+        "user": 3787781,
+        "nice": 0,
+        "sys": 945125,
+        "idle": 104244562,
+        "irq": 16078
+      },
+      {
+        "model": "Intel(R) Core(TM) i7-2600 CPU @ 3.40GHz",
+        "speed": 3392,
+        "user": 7887437,
+        "nice": 0,
+        "sys": 2358078,
+        "idle": 98731953,
+        "irq": 37890
+      },
+      {
+        "model": "Intel(R) Core(TM) i7-2600 CPU @ 3.40GHz",
+        "speed": 3392,
+        "user": 6115703,
+        "nice": 0,
+        "sys": 2441265,
+        "idle": 100420500,
+        "irq": 20875
+      },
+      {
+        "model": "Intel(R) Core(TM) i7-2600 CPU @ 3.40GHz",
+        "speed": 3392,
+        "user": 8438000,
+        "nice": 0,
+        "sys": 2169328,
+        "idle": 98370125,
+        "irq": 34921
+      },
+      {
+        "model": "Intel(R) Core(TM) i7-2600 CPU @ 3.40GHz",
+        "speed": 3392,
+        "user": 4459812,
+        "nice": 0,
+        "sys": 2324796,
+        "idle": 102192843,
+        "irq": 30375
+      }
+    ],
+    "networkInterfaces": [
+      {
+        "name": "VirtualBox Host-Only Network",
+        "internal": false,
+        "mac": "0a:00:27:00:00:0e",
+        "address": "fe80::adcd:7aea:63e0:cacd",
+        "netmask": "ffff:ffff:ffff:ffff::",
+        "family": "IPv6",
+        "scopeid": 14
+      },
+      {
+        "name": "VirtualBox Host-Only Network",
+        "internal": false,
+        "mac": "0a:00:27:00:00:0e",
+        "address": "192.168.56.1",
+        "netmask": "255.255.255.0",
+        "family": "IPv4"
+      },
+      {
+        "name": "Ethernet 2",
+        "internal": false,
+        "mac": "02:68:01:06:65:6a",
+        "address": "fe80::f835:bf0a:700a:8035",
+        "netmask": "ffff:ffff:ffff:ffff::",
+        "family": "IPv6",
+        "scopeid": 7
+      },
+      {
+        "name": "Ethernet 2",
+        "internal": false,
+ 

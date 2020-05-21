@@ -1,50 +1,140 @@
 import { Schema, model, Document, Model, ModelMapReduceOption } from 'mongoose';
+import { ObjectId, Collection } from 'mongodb';
+import { DB } from '../net';
+import { NextFunction } from 'express';
 ///<reference path="../typings/modules/mongoose/index.d.ts" />
 ///<reference path="../typings/modules/mongodb/index.d.ts" />
 
 export declare interface ICategory extends Document {
-    _id: string;
-    name: string;
-    desc: number;
-    icon: string;
-    parent_id: string;
-    children: Array<ICategory>;
-    date_added: Date;
-    date_modified: Date;
-    status: boolean;
-    top: boolean;
+  _id: string;
+  name?: string;
+  slug?: string;
+  tree?: Array<{ _id: string, name: string, slug: string }>
+  desc?: number;
+  icon?: string;
+  parentId?: string;
+  children?: Array<ICategory>;
+  date_added?: Date;
+  date_modified?: Date;
+  disabled?: boolean;
+  root?: boolean;
 }
 
-
-
-
-export interface CategoryModel extends Model<ICategory> {};
+export interface CategoryModel extends Model<ICategory> { };
 
 export class Category {
 
-    private _model: Model<ICategory>;
+  private _model: Model<ICategory>;
 
 
-    constructor(dbCollectionName: string) {
-        const schema =  new Schema({
-            _id: { type: Schema.Types.ObjectId, required: true },
-            name: { type: String, required: true },
-            desc: { type: Number, required: true },
-            icon: { type: String, required: true },
-            parent_id: { type: String, ref: 'Category' },
-            children: { type: Array, ref: 'Category' },
-            created: { type: Date, default: Date.now() },
-            modified: { type: Date },
-            status: { type: String, default: 'active' },
-            recyclebin: { type: Boolean, default: false },
-        });
+  constructor(dbCollectionName: string) {
+    const schema = new Schema({
+      _id: { type: Schema.Types.ObjectId, required: true },
+      name: { type: String, required: true },
+      desc: { type: Number, required: true },
+      icon: { type: String, required: true },
+      parent_id: { type: String, ref: 'Category' },
+      children: { type: Array, ref: 'Category' },
+      created: { type: Date, default: Date.now() },
+      modified: { type: Date },
+      status: { type: String, default: 'active' },
+      recyclebin: { type: Boolean, default: false },
+    });
 
-        this._model = model<ICategory>(dbCollectionName, schema, dbCollectionName);
+    this._model = model<ICategory>(dbCollectionName, schema, dbCollectionName);
+  }
+
+  public get model(): Model<ICategory> {
+    return this._model
+  }
+}
+
+
+export async function addHierarchyCategory(_id: ObjectId, parentId: ObjectId): Promise<any> {
+
+
+  try {
+
+    // Check DB Connection
+    if (!DB.isConnected()) { // trying to reconnect
+      await DB.connect();
+    } else {
+
+      let dbCollection: Collection = DB.getCollection('category')
+
+      let parent = await dbCollection.findOne({ '_id': parentId }, { fields: { 'name': 1, 'slug': 1, 'tree': 1 } })
+
+      // console.log('parent:: ->', parent)
+
+      const parentObj = { _id: parent._id, name: parent.name, slug: parent.slug }
+
+      let tree: { _id: ObjectId, name: string, slug: string }[] = []
+      tree.push(...parent.tree, parentObj)
+
+      dbCollection.update({ '_id': _id }, { '$set': { 'tree': tree } })
     }
+  } catch (error) {
+    console.error(error)
+    return { code: 500, status: 'error', error: error }
+  }
+}
+/**
+ * Rebuilds hierarchy category
+ * 
+ * The following helper function, rebuilds the ancestor fields to ensure correctness. 
+ * Your application cannot guarantee that the ancestor list of a parent category is correct, 
+ * because MongoDB may process the categories out-of-order.
+ * 
+ * @param _id 
+ * @param parentId 
+ * @returns hierarchy category 
+ */
+export async function rebuildHierarchyCategory(_id: ObjectId, parentId: ObjectId): Promise<any> {
 
-    public get model(): Model<ICategory> {
-        return this._model
+  try {
+
+    // Check DB Connection
+    if (!DB.isConnected()) { // trying to reconnect
+      await DB.connect();
+    } else {
+
+      const dbCollection: Collection = DB.getCollection('category')
+
+      let tree: { _id: ObjectId, name: string, slug: string }[] = []
+
+      while (parentId) {
+        const category = await dbCollection.findOne({ '_id': parentId }, { fields: { 'parentId': 1, 'name': 1, 'slug': 1, 'tree._id': 1 } })
+        if (!category) break
+
+        parentId = category.parentId as ObjectId
+        tree.unshift({ _id: category._id, name: category.name, slug: category.slug })
+      }
+
+      dbCollection.update({ '_id': _id }, { '$set': { 'tree': tree } })
     }
+  } catch (error) {
+    console.error(error)
+    return { code: 500, status: 'error', error: error }
+  }
+}
+
+export async function updateAncestryCategory(dbCollection: Collection, _id: ObjectId, set: any, ) {
+  // First, you need to update the category name with the following operation
+  const Rescat = await dbCollection.updateOne({ _id }, {
+    $set: set
+  })
+
+  return Rescat
+}
+
+export async function reconstructDescendants(dbCollection: Collection, _id: ObjectId): Promise<void> {
+  // You can use the following loop to reconstruct all the descendants of the “name” category
+  const categories = dbCollection.find({ 'tree._id': _id }, { fields: { 'parentId': 1 } })
+
+  // console.log(`categories:`, categories)
+  categories.forEach((category: { _id: ObjectId, parentId: ObjectId }) => {
+    rebuildHierarchyCategory(category._id, category.parentId)
+  })
 }
 
 /* // Map function
@@ -80,13 +170,13 @@ export const map = (): any => {
         }
         emit(cleaned,document._id)
       }
-    ) 
+    )
   }
 };
 
 // Reduce function
 export const reduce = (k:any,v: any) => {
-  
+
     // Kind of ugly, but works.
     // Improvements more than welcome!
     var values = { "documents": ['']};
@@ -102,7 +192,7 @@ export const reduce = (k:any,v: any) => {
   };
 
 export const finalOut: object = {
-    
+
 }
 
 export const MapReduceOfCategories: ModelMapReduceOption<ICategory, any, any> = {
@@ -144,7 +234,7 @@ export const MapReduceOfCategories: ModelMapReduceOption<ICategory, any, any> = 
         } else {
           finalValue.documents.push(reducedValue)
         }
-        // We have sanitized our data, now we can return it        
+        // We have sanitized our data, now we can return it
         return finalValue
 
       },

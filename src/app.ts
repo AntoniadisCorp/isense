@@ -1,32 +1,35 @@
-import express, { Application, Request, Response, NextFunction } from 'express'
+import { Application, Request, Response, NextFunction } from 'express'
+import express from 'express'
 import favicon from 'serve-favicon'
 import fpath from 'path'
-import socketio from 'socket.io'
+
 
 // GLOBAL FUNCTIONS
-import { Sockets, GBRoutines, gbr } from './global'
+import { Sockets, GBRoutines, gbr, sockAttach } from './global'
 
 // APP ROUTES
-import { mainRouter, Tasks, Auth }  from './routes'
+import { mainRouter, Tasks, Auth } from './routes'
 
 // store session state in browser cookie, keep logged in user if exist from browser or server stopped
-import cookieSession from 'cookie-session'
-import cookieParser from 'cookie-parser'
+// import cookieSession from 'cookie-session'
+// import cookieParser from 'cookie-parser'
 import bodyParser from 'body-parser'
 // static-favicon
 
 // Configuring Passport
 import passport from 'passport'
 import session from 'express-session'
-import connect_redis from 'connect-redis'
+let connect_redis = require('connect-redis')
 
 import { NodeSetSessionOptions } from './db/serverconfig/serverOptions'
 import { MemCache, memjs } from './db'
 import fileUpload from 'express-fileupload'
+import { ServerOptions } from 'socket.io'
 
+var device = require('express-device');
 // attach session to RedisStore
-const RedisStore = connect_redis(session),
-      helmet  = require('helmet')
+const RedisStore = connect_redis(session)
+//   helmet  = require('helmet')
 
 
 
@@ -42,26 +45,27 @@ class Server {
 
     // Server express Application
     public app: Application
-    // SOCKET IO
-    public socketio: any
+
     // SERVER LISTEN PORTS
     public PORT: number | string = 8080
     public IP: string
+
+    // Session Options - have a uniqueId
+    private sessionOptions: any
+
+    // SOCKET IO
+    public socketio: (server: any, opt?: ServerOptions | undefined) => void
 
     //create classes routes, routines
     private routeObject: mainRouter
     private taskObject: Tasks;
     private authObject: Auth;
 
-    
-    // Session Options - have a uniqueId
-    private sessionOptions: any
-
-     // set Routines Adresses Objects and Server Port
+    // set Routines Adresses Objects and Server Port
     private env: string = process.env.NODE_ENV || 'production'
 
     // CONSTRUCTOR CLASS
-    constructor () {
+    constructor() {
 
 
         // Create Express Application
@@ -69,22 +73,22 @@ class Server {
 
         // Routes Objects
         this.routeObject = new mainRouter()
-        this.authObject = new Auth(passport)        
+        this.authObject = new Auth(passport)
         this.taskObject = new Tasks()
 
         // Create Server Socket IO
-        this.socketio = this.sockattach
+        this.socketio = sockAttach
 
         // Redis Session Store
         this.sessionOptions = NodeSetSessionOptions(
-                'keyboard cat',
-                gbr.generateUUID('UUID'), 
-                new RedisStore({ 
+            'keyboard cat',
+            gbr.generateUUID('UUID'),
+            new RedisStore({
                 host: memjs[0].host,
-                port: memjs[0].port, 
-                client: new MemCache().connect(15000).cb, 
-                ttl :  260 
-            }) )
+                port: memjs[0].port,
+                client: new MemCache().connect(15000).cb,
+                ttl: 260
+            }))
 
         // this.PORT = 'production' == this.env ? process.env.OPENSHIFT_NODEJS_PORT || this.PORT : this.PORT
         this.PORT = process.env.PORT || this.PORT
@@ -93,15 +97,8 @@ class Server {
         this.mainServe()
     }
 
-    // USE SOCKET IO
-    private sockattach (server: any) {
+    private mainServe(): void {
 
-        let socketObject: Sockets = new Sockets()
-        socketObject.attach(socketio.listen(server))
-    }
-  
-    private mainServe (): void {
-        
         // Express File uploading
         this.app.use(fileUpload());
         // View Engine        
@@ -118,13 +115,13 @@ class Server {
         /**
          * HTTP Strict Transport Security (HSTS)
          * This solution is to tell the browser to never make HTTP requests again
-         *  */ 
+         *  */
         /* this.app.use(helmet.hsts({
             maxAge: 7776000000,
             includeSubdomains: true
           })); */
 
-        
+
         // Cookie Session
         /* this.app.use(cookieSession({
             keys: ["keyboard cat cat1","keyboard cat cat2"],
@@ -135,37 +132,43 @@ class Server {
         // cookieParser
         // this.app.use(cookieParser('secretSign#143_!223'))
         // Body Parser MW
-        this.app.use(bodyParser.json({limit: '2mb'}))
-        this.app.use(bodyParser.urlencoded({limit: '2mb', extended: false}))
+        this.app.use(bodyParser.json({ limit: '2mb' }))
+        this.app.use(bodyParser.urlencoded({ limit: '2mb', extended: false }))
 
-        
+
 
         // SET PASSPORT AND SESSION OPTIONS
         this.app.use(session(this.sessionOptions))
         this.app.use(passport.initialize())
         this.app.use(passport.session())
 
+        this.app.use(device.capture())
 
 
         // set Headers and methods
-        this.app.use( (req: Request, res: Response, next: NextFunction) => {
+        this.app.use((req: Request, res: Response, next: NextFunction) => {
 
-            res.header('Access-Control-Allow-Origin','http://localhost:4200')
-            res.header('Access-Control-Allow-Headers','Origin, X-Requested-With, Content-Type, Accept, X-Auth-Token, Authorization')
-            res.header('Access-Control-Allow-Methods','OPTIONS, GET, PATCH, POST, PUT, DELETE')
-            res.header('Access-Control-Allow-Credentials', 'true' );
+            // if (req.session && !req.session!.views) {
+            res.header('Access-Control-Allow-Origin', 'http://localhost:4200')
+            res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, X-Auth-Token, Authorization')
+            res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
+            res.header('Access-Control-Allow-Credentials', 'true');
+            // }
+
 
             if ('OPTIONS' == req.method) {
                 res.sendStatus(200)
             } else {
 
-                let sQWid = req.session;
+                let sQWid: any = req.session;
 
-                sQWid!.views = sQWid!.views? sQWid!.views+1 : 1
+                sQWid!.views = sQWid!.views ? sQWid!.views + 1 : 1
                 // req.session!.passport = ?
 
-                if (req.cookies) console.error('Cookies: ' ,req.cookies)
-                console.error(`${req.ip} ${req.method} ${req.url} by session`, req.session)
+                // if (req.cookies) console.error('Cookies: ', req.cookies)
+
+                var expireTime = sQWid.cookie.maxAge / 1000;
+                console.warn(`${req.ip} ${req.method} ${req.url} by sessionID ${req.sessionID} expireTime: ${expireTime}`/* , req.session */)
                 next()
             }
 
@@ -200,6 +203,7 @@ class Server {
 
         // USE ROUTES
         this.app.use('/', this.routeObject.router)
+
         // secure Route
         this.app.use('/auth', this.authObject.router)
         this.app.use('/task', this.taskObject.router)

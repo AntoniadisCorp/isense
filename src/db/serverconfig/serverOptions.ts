@@ -1,4 +1,4 @@
-import { RedisStore, RedisStoreOptions } from "connect-redis"
+import { RedisStoreOptions } from "connect-redis"
 
 
 export let NodeSetSessionOptions = (secret: string, genid: string, store: RedisStoreOptions): object => {
@@ -12,7 +12,7 @@ export let NodeSetSessionOptions = (secret: string, genid: string, store: RedisS
         resave: false,
         // using store session on Redis using express-session + connect
         store: store,
-        cookie: { secure: true, httponly: true, MaxAge: 3600000 }, // Note that the cookie-parser module is no longer needed
+        cookie: { secure: true, httponly: true, maxAge: 3600000 }, // Note that the cookie-parser module is no longer needed
         cookieName: '__UDRD',
         duration: 30 * 60 * 1000,
         activeDuration: 5 * 60 * 1000,
@@ -21,7 +21,7 @@ export let NodeSetSessionOptions = (secret: string, genid: string, store: RedisS
 }
 
 export let RedisClientOptions = (host: string, port: number, password?: string): object => {
-    return  {
+    return {
         port,               // replace with your port
         host,        // replace with your hostanme or IP address
         password,    // replace with your password
@@ -32,5 +32,5 @@ export let RedisClientOptions = (host: string, port: number, password?: string):
         //   cert : stringValueOfCertFile,
         //   ca   : [ stringValueOfCaCertFile ]
         // }
-      }
+    }
 } 

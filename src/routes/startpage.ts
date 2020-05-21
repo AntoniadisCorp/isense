@@ -1,4 +1,4 @@
-import express, {Router,Request,Response,NextFunction} from 'express'
+import { Router, Request, Response, NextFunction } from 'express'
 const reque = require('request');
 
 class mainRouter {
@@ -6,14 +6,16 @@ class mainRouter {
     //get router
     public router: Router;
 
-    constructor () {
+    constructor() {
 
         this.router = Router()
         this.httpRoutesGets()
         this.httpRoutesPosts()
+        this.httpRoutesPut()
+        this.httpRoutesDelete()
     }
-    
-    
+
+
     // Angular Routes
 
     /**
@@ -22,16 +24,19 @@ class mainRouter {
 
     httpRoutesGets(): void {
 
+
+
         this.router.get('/ServiceLogin', this.ServiceLogin) // get ServiceLogin
 
-        this.router.get('/', async (req:Request, res:Response) => {
-            let d = {  message: 'Hello World!', sessionInfo: '' }
-            if (req.session && req.session!.key) { 
-                d = {  message: 'Hello Redis World!', sessionInfo: req.session!.key, }
+        const startPage = async (req: Request, res: Response) => {
+            let d = { message: 'Hello World!', sessionInfo: '' }
+            if (req.session && req.session!.key) {
+                d = { message: 'Hello Redis World!', sessionInfo: req.session!.key, }
             }
             console.log(d.message)
-            res.render('index',d)
-          })
+            res.render('index', d)
+        }
+        this.router.get('/', startPage)
     }
 
     /**
@@ -47,13 +52,13 @@ class mainRouter {
      * https Router Put
      */
 
-    httpRoutesPut(): void {}
+    httpRoutesPut(): void { }
 
     /**
      * https Router Delete
      */
 
-    httpRoutesDelete(): void {}
+    httpRoutesDelete(): void { }
 
     /**
      * Router Functions
@@ -71,42 +76,42 @@ class mainRouter {
     //     }
     //   }
 
-    async ServiceLogin (req: Request, res: Response, next: NextFunction) { 
+    async ServiceLogin(req: Request, res: Response, next: NextFunction) {
         if (req.isAuthenticated()) res.redirect('/')
         res.render('signin')
     }
 
 
 
-    recaptcha (options: any, req: Request, res: Response) {
+    async recaptcha(options: any, req: Request, res: Response) {
 
         // g-recaptcha-response is the key that browser will generate upon form submit.
         // if its blank or null means user has not selected the captcha, so return the error.
-        if(req.body['g-recaptcha-response'] === undefined || req.body['g-recaptcha-response'] === '' || req.body['g-recaptcha-response'] === null) {
-            return res.json({"responseCode" : 1,"responseDesc" : "Please select captcha"});
+        if (req.body['g-recaptcha-response'] === undefined || req.body['g-recaptcha-response'] === '' || req.body['g-recaptcha-response'] === null) {
+            return res.json({ "responseCode": 1, "responseDesc": "Please select captcha" });
         }
 
         // Put your secret key here.
         let secretKey: string = "--paste your secret key here--";
         // req.connection.remoteAddress will provide IP address of connected user.
-        let verificationUrl: string = req.protocol + '://' + "www.google.com/recaptcha/api/siteverify?secret=" + secretKey + 
+        let verificationUrl: string = req.protocol + '://' + "www.google.com/recaptcha/api/siteverify?secret=" + secretKey +
             "&response=" + req.body['g-recaptcha-response'] + "&remoteip=" + req.connection.remoteAddress
-        
+
         // Hitting GET request to the URL, Google will respond with success or error scenario.
         console.log('rest::getJSON recaptcha');
-        
-        reque(verificationUrl, (error:any,res:Response,body:any) => {
+
+        reque(verificationUrl, (error: any, res: Response, body: any) => {
 
             body = JSON.parse(body);
             // Success will be true or false depending upon captcha validation.
 
-            if(body.success !== undefined && !body.success) {
-                return res.json({"responseCode" : 1,"responseDesc" : "Failed captcha verification"});
+            if (body.success !== undefined && !body.success) {
+                return res.json({ "responseCode": 1, "responseDesc": "Failed captcha verification" });
             }
-            res.json({"responseCode" : 0,"responseDesc" : "Sucess"});
+            res.json({ "responseCode": 0, "responseDesc": "Sucess" });
         });
     }
 }
- 
+
 
 export { mainRouter }

@@ -5,9 +5,10 @@ example at the bottom.
 Save the following server in example.js:
 */
 // var sys = require('sys')
-import net = require('net')
+let net = require('net')
 import { GBRoutines } from '.'
-let gps = require('gps-tracking');
+// import * as gps from 'gps-tracking'
+// let gps = require('gps-tracking');
 
 class TcpSocketServer {
 
@@ -40,7 +41,7 @@ class TcpSocketServer {
 
     TcpGpsTrack() {
 
-        let server = gps.server(this.gpsOptions,(device: any ,connection: any) => {
+        /* let server = gps.server(this.gpsOptions,(device: any ,connection: any) => {
 
             device.on("connected",function(data: any){
         
@@ -80,7 +81,7 @@ class TcpSocketServer {
                 console.log(data.toString()); 
             })
         
-        });
+        }); */
 
     }
 
@@ -132,7 +133,7 @@ class TcpSocketServer {
         // incoming data, i.e. update a map 
         this.server.on('track', (gps:any) => {
             //updateMap (gps.geo.latitude, gps.geo.longitude);
-            console.log('GPS: ', `${gps.geo.latitude} ${gps.geo.longitude}`);
+            // console.log('GPS: ', `${gps.geo.latitude} ${gps.geo.longitude}`);
         });
 
         this.server.on('data', (raw:any) => {

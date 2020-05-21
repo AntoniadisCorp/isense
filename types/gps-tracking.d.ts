@@ -1,0 +1,32 @@
+export class server {
+    constructor(opts: any, callback: any);
+    opts: any;
+    devices: any;
+    server: any;
+    availableAdapters: any;
+    setAdapter: any;
+    getAdapter: any;
+    addAdaptar: any;
+    init: any;
+    do_log: any;
+    setDebug: any;
+    getDebug: any;
+    find_device: any;
+    send_to: any;
+    addListener(type: any, listener: any): any;
+    emit(type: any, args: any): any;
+    eventNames(): any;
+    getMaxListeners(): any;
+    listenerCount(type: any): any;
+    listeners(type: any): any;
+    off(type: any, listener: any): any;
+    on(type: any, listener: any): any;
+    once(type: any, listener: any): any;
+    prependListener(type: any, listener: any): any;
+    prependOnceListener(type: any, listener: any): any;
+    rawListeners(type: any): any;
+    removeAllListeners(type: any, ...args: any[]): any;
+    removeListener(type: any, listener: any): any;
+    setMaxListeners(n: any): any;
+}
+export const version: string;

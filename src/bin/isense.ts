@@ -4,7 +4,7 @@
  * Module dependencies.
  */
 import serve from '../app'
-import https  from 'https'
+import https, { Server }  from 'https'
 import fs from 'fs'
 import { normalize } from 'path';
 import { DB } from '../db';
@@ -38,29 +38,14 @@ var port = normalizePort(serve.PORT.toString()),
 serve.app.set('port', port);
 serve.app.set('ip', ip);
 
-/**
- * Event listener for HTTP server "listening" event.
- */
-let onListening = async () => {
- 
-  let addr = server.address();
-  let bind = typeof addr === 'string'
-    ? 'pipe ' + addr
-    : 'port ' + (addr? addr.port: null);
-    try {
-      await DB.connect();
-    } catch (err) {
-      console.error(`Unable to connect to Mongo!`, err);
-    }
-  // debug('Listening on ' + bind);
-}
+
 
 /**
  * Create HTTPS server.
  */
 // for https
 serve.app.use(enforce.HTTPS({ trustProtoHeader: true }))
-let server = https.createServer(options, serve.app);
+let server: Server = https.createServer(options, serve.app);
 
 /**
  * Listen on provided port, on all network interfaces.
@@ -78,6 +63,24 @@ let io = serve.socketio
 // a websocket, log that a user has connected
 io( server );
 
+
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+async function onListening() {
+ 
+  let addr = server.address();
+  let bind = typeof addr === 'string'
+    ? 'pipe ' + addr
+    : 'port ' + (addr? addr.port: null);
+    try {
+      await DB.connect();
+    } catch (err) {
+      console.error(`Unable to connect to Mongo!`, err);
+    }
+  // debug('Listening on ' + bind);
+}
 
 /**
  * Normalize a port into a number, string, or false.

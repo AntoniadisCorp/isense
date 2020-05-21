@@ -1,22 +1,37 @@
-import passport = require("passport");
+import passport from 'passport';
 import { GBRoutines } from "./routines";
-import multer = require("multer");
+import multer from 'multer';
 import { UploadedFile } from "express-fileupload";
 export const randtoken = require('rand-token')
-export const device = require('express-device')
+// export const device = require('express-device')
 export const gbr = new GBRoutines();
 import fpath from 'path'
 import { NextFunction } from "express";
+import { DB } from '../db';
+import { Collection, ObjectId } from 'mongodb';
+import { listen, ServerOptions } from 'socket.io'
+import { Sockets } from '.';
+import { IMAGE_DEFAULT_DIR } from '../db/models';
 
-export interface ExpressMulterFile {
-
-  avatar: UploadedFile
+export function getMinMax(arr: Array<any>) {
+  return arr.reduce(({ min, max }, v) => ({
+    min: min < v ? min : v,
+    max: max > v ? max : v,
+  }), { min: arr[0], max: arr[0] });
 }
 
+export function missNoArray(numbers: Array<number>) {
+  let missing = [];
+  let arrayLength = numbers.length
+  // Find the missing array items
+  for (var i = 0; i < arrayLength; i++) {
+    if (numbers.indexOf(i) < 0) {
+      missing.push(i);
+    }
+  }
 
-// Multer File upload settings
-const s: string = 'C:/Users/kopie/Documents/VSCodeProjects/smartdeep/src' || fpath.join(__dirname, '..')
-export const IMAGE_DEFAULT_DIR =  s + '/assets/img/avatars/';
+  return missing
+}
 
 export const jsonStatusError = {
   "error": {
@@ -49,8 +64,8 @@ export const isAuth = (req: any, res: any, next: any) => {
   console.log(`auth session passport ${req.isAuthenticated()}`, req.session.passport);
 
   // Cookies that have not been signed
-  console.error(`req.signedCookies ${req.sessionID}`, req.signedCookies)
-  console.error(`req.cookies`, req.cookies)
+  console.error(`req.signedCookies ${req.sessionID}`/* , req.signedCookies */)
+  // console.error(`req.cookies`, req.cookies)
 
 
   // let isAuthenticated = () => req.session.passport && req.session.passport.user? true : false
@@ -72,8 +87,8 @@ export const isJwtAuth = (req: any, res: any, next: NextFunction) => {
     const token = getTokenFromHeader(req)
     console.error(`JWT TOKEN FROM HEADER auth: `)
 
-    console.error(`req.signedCookies ${req.sessionID}`, req.signedCookies)
-    console.error(`req.cookies`, req.cookies)
+    console.error(`req.signedCookies ${req.sessionID}`/* , req.signedCookies */)
+    // console.error(`req.cookies`, req.cookies)
 
     // if user is authenticated in the session, carry on
     if (token) return next();
@@ -107,4 +122,83 @@ export let upload = multer({
       return cb(new Error('Only .png, .jpg and .jpeg format allowed!'), true);
     }
   }
-});
+})
+
+
+export async function createBookCase(newBookCase: any, bookId: number): Promise<any> {
+
+  try {
+
+    // Check DB Connection
+    if (!DB.isConnected()) { // trying to reconnect
+      await DB.connect();
+    } else {
+      let dbCollection: Collection = DB.getCollection('bookcase')
+      newBookCase.bookId = new ObjectId(bookId)
+      dbCollection.save(newBookCase, (err: any, result: any) => {
+        if (err) { return { code: 500, status: 'error', error: err } }
+
+        return {
+          code: 200,
+          status: 'success',
+          data: {
+            result,
+            message: `bookcase saved successful! `
+          }
+        }
+      })
+    }
+  } catch (error) {
+    console.error(error)
+    return { code: 500, status: 'error', error: error }
+  }
+}
+
+
+export function popByKey(myArray: any[], key: string) {
+
+  const index = myArray.indexOf(key, 0);
+  if (index > -1) {
+    myArray.splice(index, 1);
+  }
+}
+
+export function shiftRsortNo(myArray: any[], key: number) {
+
+  let k = myArray
+
+  for (let i = key, arr; arr = k[i]; i++) {
+    arr.bookshelfNo += 1
+  }
+}
+
+export function shiftLsortNo(myArray: any[], key: number) {
+
+  let k = myArray
+
+  for (let i = key, arr; arr = k[i]; i++) {
+    arr.bookshelfNo -= 1
+  }
+}
+
+export function shiftRByKey(myArray: any[], index: number, value: any) {
+
+  if (index > -1) {
+    myArray.splice(index, 0, value);
+  }
+}
+
+export function shiftLByKey(myArray: any[], index: number, value: any) {
+
+  if (index > -1) {
+    myArray.splice(index, 1);
+  }
+}
+
+// USE SOCKET IO
+export function sockAttach(server: any, opt?: ServerOptions | undefined): void {
+
+  let socketObject: Sockets = new Sockets()
+  socketObject.attach(listen(server, opt))
+}
+
