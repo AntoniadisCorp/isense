@@ -246,7 +246,7 @@ class Auth {
                         if (!!huserExist) console.log('store user key to redis already exist', huserExist)
                         else {
                             // Get user Library index
-                            if (user._session.libraryId) {
+                            if (user._session && user._session.libraryId) {
 
                                 let response: any = await getCollectionById({ id: user._session.libraryId.toString(), col: 'library' })
 
@@ -287,18 +287,20 @@ class Auth {
     async logout(req: Request, res: Response, next: NextFunction) {
 
         const refreshToken: string = req.body.refreshToken;
-        console.info(`logout now, refreshToken:  }`)
+        console.info(`logout now, refreshToken: ${refreshToken}`)
 
-        // store user key to redis
-        const refTokenKey: string = refreshToken.substring(0, 31)
-        const Redisclient = new MemCache().connect(15000).cb
+        if (refreshToken) {
+            // store user key to redis
+            const refTokenKey: string = refreshToken.substring(0, 31)
+            const Redisclient = new MemCache().connect(15000).cb
 
-        // set RefreshToken
-        Redisclient.del(refTokenKey, (num: any) => {
-            if (num > 0) { console.log(`refreshToken '${refTokenKey}' removed from Redis`) }
-        })
-        // Redis Connection Closed
-        Redisclient.quit();
+            // set RefreshToken
+            Redisclient.del(refTokenKey, (num: any) => {
+                if (num > 0) { console.log(`refreshToken '${refTokenKey}' removed from Redis`) }
+            })
+            // Redis Connection Closed
+            Redisclient.quit();
+        }
 
         // if (req.session!.destroy) {
         req.session!.destroy(function (err) {
