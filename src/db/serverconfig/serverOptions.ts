@@ -1,10 +1,10 @@
 import { RedisStoreOptions } from "connect-redis"
 
 
-export let NodeSetSessionOptions = (secret: string, genid: string, store: RedisStoreOptions): object => {
+export const NodeSetSessionOptions = (secret: string, genid: string, store: RedisStoreOptions): object => {
 
-    return {
-        secret: secret,
+    return Object.freeze({
+        secret,
         genid: (req: Request) => {
             return genid // use UUIDs for session IDs
         },
@@ -17,11 +17,11 @@ export let NodeSetSessionOptions = (secret: string, genid: string, store: RedisS
         duration: 30 * 60 * 1000,
         activeDuration: 5 * 60 * 1000,
         ephemeral: true
-    }
+    })
 }
 
-export let RedisClientOptions = (host: string, port: number, password?: string): object => {
-    return {
+export const RedisClientOptions = (host: string, port: number, password?: string): object => {
+    return Object.freeze({
         port,               // replace with your port
         host,        // replace with your hostanme or IP address
         password,    // replace with your password
@@ -32,5 +32,5 @@ export let RedisClientOptions = (host: string, port: number, password?: string):
         //   cert : stringValueOfCertFile,
         //   ca   : [ stringValueOfCaCertFile ]
         // }
-    }
-} 
+    })
+}

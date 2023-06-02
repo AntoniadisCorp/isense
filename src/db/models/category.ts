@@ -1,9 +1,8 @@
-import { Schema, model, Document, Model, ModelMapReduceOption } from 'mongoose';
+import { Schema, model, Document, Model } from 'mongoose';
 import { ObjectId, Collection } from 'mongodb';
 import { DB } from '../net';
-import { NextFunction } from 'express';
-///<reference path="../typings/modules/mongoose/index.d.ts" />
-///<reference path="../typings/modules/mongodb/index.d.ts" />
+/* ///<reference path="../typings/modules/mongoose/index.d.ts" />
+///<reference path="../typings/modules/mongodb/index.d.ts" /> */
 
 export declare interface ICategory extends Document {
   _id: string;
@@ -62,16 +61,17 @@ export async function addHierarchyCategory(_id: ObjectId, parentId: ObjectId): P
 
       let dbCollection: Collection = DB.getCollection('category')
 
-      let parent = await dbCollection.findOne({ '_id': parentId }, { fields: { 'name': 1, 'slug': 1, 'tree': 1 } })
+      let parent = await dbCollection.findOne({ '_id': parentId, projection: {'name': 1, 'slug': 1, 'tree': 1 }})
 
       // console.log('parent:: ->', parent)
 
-      const parentObj = { _id: parent._id, name: parent.name, slug: parent.slug }
+      const parentObj = { _id: parent!._id, name: parent!.name, slug: parent!.slug }
 
+      if (!parent) return { code: 500, status: 'error', error: 'connect find category id' }
       let tree: { _id: ObjectId, name: string, slug: string }[] = []
       tree.push(...parent.tree, parentObj)
 
-      dbCollection.update({ '_id': _id }, { '$set': { 'tree': tree } })
+      dbCollection.updateOne({ '_id': _id }, { '$set': { 'tree': tree } })
     }
   } catch (error) {
     console.error(error)
@@ -103,14 +103,14 @@ export async function rebuildHierarchyCategory(_id: ObjectId, parentId: ObjectId
       let tree: { _id: ObjectId, name: string, slug: string }[] = []
 
       while (parentId) {
-        const category = await dbCollection.findOne({ '_id': parentId }, { fields: { 'parentId': 1, 'name': 1, 'slug': 1, 'tree._id': 1 } })
-        if (!category) break
+        const category = await dbCollection.findOne({ '_id': parentId }, { projection: { 'parentId': 1, 'name': 1, 'slug': 1, 'tree._id': 1 } })    
+            if (!category) break
 
         parentId = category.parentId as ObjectId
         tree.unshift({ _id: category._id, name: category.name, slug: category.slug })
       }
 
-      dbCollection.update({ '_id': _id }, { '$set': { 'tree': tree } })
+      dbCollection.updateOne({ '_id': _id }, { '$set': { 'tree': tree } })
     }
   } catch (error) {
     console.error(error)
@@ -129,13 +129,18 @@ export async function updateAncestryCategory(dbCollection: Collection, _id: Obje
 
 export async function reconstructDescendants(dbCollection: Collection, _id: ObjectId): Promise<void> {
   // You can use the following loop to reconstruct all the descendants of the “name” category
-  const categories = dbCollection.find({ 'tree._id': _id }, { fields: { 'parentId': 1 } })
+  const categories: any = dbCollection.find({ 'tree._id': _id , projection: {'parentId': 1  }} )
 
   // console.log(`categories:`, categories)
   categories.forEach((category: { _id: ObjectId, parentId: ObjectId }) => {
     rebuildHierarchyCategory(category._id, category.parentId)
   })
 }
+
+
+
+
+
 
 /* // Map function
 export const map = (): any => {

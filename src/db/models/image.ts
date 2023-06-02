@@ -15,7 +15,7 @@ export interface ImageDef {
 }
 
 
-export function fileImgError(files: FileArray | undefined) {
+export function fileImgError(files: FileArray | undefined | null) {
 
     let err: boolean = (files !== null && !files) || (files !== null && Object.keys(files).length === 0)
     console.log(files, err)

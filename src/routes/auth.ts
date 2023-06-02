@@ -10,9 +10,9 @@ import jwt from 'jsonwebtoken'
 
 // import session from 'express-session'
 import { utype, GBRoutines, User, getTokenFromHeader, isAuth, randtoken, debug } from '../global'
-import { Collection, ObjectId, ObjectID } from 'mongodb';
+import { Collection, Long, ObjectId } from 'mongodb';
 import { DB, MemCache } from '../db';
-import { Auth2 } from './auth2';
+// import { Auth2 } from './auth2';
 import { Token, SECRET, Client } from '../db/models';
 
 const BearerStrategy = require('passport-http-bearer'),
@@ -211,7 +211,7 @@ class Auth {
                         return next(info.message);
                     }
 
-                    // console.log(user)
+                    console.log(user)
 
                     req.logIn(user, { session: false }, async (err) => {
                         if (err) { return next(err) }
@@ -236,7 +236,7 @@ class Auth {
                         }
 
 
-
+                        console.log('newUser: ', newUser)
                         // store user key to redis
                         const Redisclient = new MemCache().connect(15000).cb
 
@@ -268,10 +268,13 @@ class Auth {
                         // set RefreshToken
                         const refTokenKey: string = refreshToken.substring(0, 31)
                         console.log(`refreshToken: ${refTokenKey}`)
-                        Redisclient.set(refTokenKey, JSON.stringify({ _id: newUser._id, username: newUser.username }), (err: any, redis: any) => {
-                            if (err) console.log(err)
-                            else console.log('redis: ', redis)
-                        })
+                        Redisclient.set(
+                            refTokenKey,
+                            JSON.stringify({ _id: newUser._id, username: newUser.username }),
+                            (err: any, redis: any) => {
+                                if (err) console.log(err)
+                                else console.log('redis: ', redis)
+                            })
 
                         // Redis Connection Closed
                         Redisclient.quit();
@@ -311,7 +314,13 @@ class Auth {
             }
         });
         // }
-        req.logOut();
+        req.logOut({}, err => {
+            if (err) {
+                console.log(err);
+            } else {
+                console.log('User Session Logged out');
+            }
+        })
         res.sendStatus(204);
     }
 
@@ -324,8 +333,8 @@ class Auth {
         const Redisclient = new MemCache().connect(15000).cb
 
         // set RefreshToken
-        Redisclient.get(refTokenKey, (err: any, key: string) => {
-            if (err) { console.log(err); Redisclient.quit(); res.sendStatus(401) }
+        Redisclient.get(refTokenKey, (err: any, key: string | null) => {
+            if (err || key === null) { console.log(err + '' + 'key is null'); Redisclient.quit(); res.sendStatus(401) }
             else {
 
                 const token = jwt.sign(JSON.parse(key), SECRET, { expiresIn: 600 })
@@ -383,13 +392,14 @@ class Auth {
                         if (err) { return next(err) }
 
                         const client: Client = {
-                            _id: new ObjectID('5099803df3f4948bd2f98391'), // generate client app id
+                            _id: new ObjectId('5099803df3f4948bd2f98391'), // generate client app id
                             name: gbr.generateUUID('timestamp'), // newclient
                             secret: '5099803df3f4948bd2f98392', // client appsecret
                             userId: user._id,
                             ts: new Timestamp(1412180887, 1)
                         }
-                        req.session!.user = {
+                        // @ts-ignore
+                        req.session.user = {
                             _id: user._id,
                         }
 
@@ -419,7 +429,13 @@ class Auth {
     }
 
     async signout(req: Request, res: Response, next: NextFunction) {
-        req.logOut();
+        req.logOut({}, err => {
+            if (err) {
+                console.log(err);
+            } else {
+                console.log('User Session Logged out');
+            }
+        })
         res.sendStatus(204).redirect('/');
     }
 
@@ -463,7 +479,7 @@ class Auth {
                     }
 
                     // save the user
-                    dbCollection.save(user, (err: any, user: any) => {
+                    dbCollection.insertOne(user, (err: any, user: any) => {
                         if (err) {
                             console.error('Error in Saving user: ', err);
                             return done(null, false, { message: 'Error in Saving user, ' + err });
@@ -501,7 +517,7 @@ class Auth {
                 const dbCollection: Collection = DB.getCollection('user');
 
                 //Find the user associated with the email provided by the user
-                const user = await dbCollection.findOne({
+                const user: any = await dbCollection.findOne({
                     $or: [{ username: username },
                     { email: username }, { mobile: username }]
                 });

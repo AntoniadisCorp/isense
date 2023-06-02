@@ -13,7 +13,7 @@ import { mainRouter, Tasks, Auth } from './routes'
 // store session state in browser cookie, keep logged in user if exist from browser or server stopped
 // import cookieSession from 'cookie-session'
 // import cookieParser from 'cookie-parser'
-import bodyParser from 'body-parser'
+// import bodyParser from 'body-parser'
 // static-favicon
 
 // Configuring Passport
@@ -22,9 +22,12 @@ import session from 'express-session'
 let connect_redis = require('connect-redis')
 
 import { NodeSetSessionOptions } from './db/serverconfig/serverOptions'
+
 import { MemCache, memjs } from './db'
 import fileUpload from 'express-fileupload'
 import { ServerOptions } from 'socket.io'
+import { makeExpressCallback } from './express-callback'
+import { notFound } from './controllers'
 
 var device = require('express-device');
 // attach session to RedisStore
@@ -70,6 +73,12 @@ class Server {
 
         // Create Express Application
         this.app = express()
+
+        // TODO: figure out DNT compliance.
+        this.app.use((_, res, next) => {
+            res.set({ Tk: '!' })
+            next()
+        })
 
         // Routes Objects
         this.routeObject = new mainRouter()
@@ -132,8 +141,9 @@ class Server {
         // cookieParser
         // this.app.use(cookieParser('secretSign#143_!223'))
         // Body Parser MW
-        this.app.use(bodyParser.json({ limit: '2mb' }))
-        this.app.use(bodyParser.urlencoded({ limit: '2mb', extended: false }))
+        this.app.use(express.urlencoded({ limit: '2mb', extended: false }));
+        this.app.use(express.json({ limit: '2mb' })) // To parse the incoming requests with JSON payloads
+
 
 
 
@@ -144,7 +154,10 @@ class Server {
 
         this.app.use(device.capture())
 
-
+        /* this.app.use((_, res, next) => {
+            res.set({ Tk: '!' })
+            next()
+        }) */
         // set Headers and methods
         this.app.use((req: Request, res: Response, next: NextFunction) => {
 
@@ -152,7 +165,11 @@ class Server {
             res.header('Access-Control-Allow-Origin', 'http://localhost:4200')
             res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, X-Auth-Token, Authorization')
             res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
-            res.header('Access-Control-Allow-Credentials', 'true');
+            res.header('Access-Control-Allow-Credentials', 'true')
+
+            // res.header('Content-Type', req.get('Content-Type'))
+            res.header('Referer', req.get('referer'))
+            res.header('User-Agent', req.get('User-Agent'))
             // }
 
 
@@ -207,6 +224,7 @@ class Server {
         // secure Route
         this.app.use('/auth', this.authObject.router)
         this.app.use('/task', this.taskObject.router)
+        this.app.use(makeExpressCallback(notFound))
 
         // // will print stacktrace
         /* if (this.app.get('env') === 'development') {
@@ -234,3 +252,4 @@ class Server {
 
 
 export default new Server()
+

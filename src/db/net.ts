@@ -4,33 +4,17 @@
 
 
 /* import { connect, connection, Connection, set } from 'mongoose'; */
-import { MongoClient, connect, MongoClientOptions, Collection, Db, MongoError } from 'mongodb';
-import * as jdb from './netconfig/connect.json'
-import * as memjs from './netconfig/connectRedis.json';
+import { MongoClient, MongoClientOptions, Collection, Db, MongoError } from 'mongodb';
+import { mongoUri, mongoCFG, dbName, memobj, dbobj, memjs } from './serverconfig/netselector';
 
+
+/* 
 import {
   Device, DeviceModel, Category, Cate_prod,
   CategoryModel, Cate_prodModel, Product, ProductModel
-} from './models'
+} from './models' */
+
 // import assert = require('assert');
-
-let dbArray: Array<string> = ['local', 'Atlas', 'mLab', 'Clever', 'Azure']
-let memArray: Array<string> = ['RedisCache', 'local'];
-const local = 'local'
-// MongoDb db Name, JSON file indexing
-const dbjsonIndex = dbArray.indexOf(local),
-  dbobj = jdb[dbjsonIndex],
-  dbName = dbobj.dbname,
-
-  // Redis Cloud JSON file Indexing
-  memjsonIndexOf = (memArray: Array<string>, RedisIndex: any) => memArray.indexOf(RedisIndex),
-  memobj = memjs[memjsonIndexOf(memArray, local)]
-
-
-export const mongoUri = jdb[dbjsonIndex].mongoUri + '/' + dbName,
-  mongoCFG = jdb[dbjsonIndex].mongoCFG
-
-console.log(`Trying connect to ... ${dbName} at ${dbobj._common}`)
 
 
 
@@ -50,15 +34,13 @@ class DB {
   private static client: MongoClient;
   private readonly mongoUri = mongoUri;
   private readonly dbName = dbName;
+
+  private static CountConnections: number = 0;
   //   private _models: IModels;
 
   private constructor() {
 
-    /* set('debug', true); */
-    /* this._db = connection;
-    this._db.on('open', this.connected);
-    this._db.on('error', this.error);
-    this._db.on('close', this.disconnect); */
+
 
     /*  this._models = {
          Category: new Category('category').model,
@@ -72,20 +54,25 @@ class DB {
   // Open the MongoDB connection.
   public static async connect(Uri?: string, CFG?: MongoClientOptions) {
 
-    console.log('Connecting to mongodb');
+    console.log(`Trying connect(${++this.CountConnections}) to MongoDB..`)
+
     if (!DB.instance) {
+
       DB.instance = new DB();
     }
-    try {
-      if (!DB.client) {
-        console.info(`Connecting to Uri: ${Uri ? Uri : mongoUri}`);
-        DB.client = await MongoClient.connect(Uri ? Uri : mongoUri, CFG ? CFG : mongoCFG);
-        console.info(`Connected to Mongodb!`);
-      }
-    } catch (error) {
-      console.log('error during connecting to mongoDB: ');
-      console.error(error);
 
+    try {
+
+      console.info(`Connecting to MongoDB Uri: ${!Uri ? mongoUri : Uri} at ${dbobj._common}`);
+
+      DB.client = await MongoClient.connect(!Uri ? mongoUri : Uri, CFG ? CFG : mongoCFG);
+
+      console.info(`MongoDB Connected!`);
+
+    } catch (error) {
+
+      console.log('error during connecting to MongoDB: ');
+      console.error(error);
     }
   }
 
@@ -94,24 +81,24 @@ class DB {
   }
 
   // Close the existing connection.
-  public static disconnect() {
+  public static async disconnect(): Promise<void | Error> {
 
     if (DB.client) {
-      console.log(`Mongoose has disconnected from ${DB.getDB().databaseName}`);
-      DB.client.close()
-        .then()
-        .catch((error: MongoError) => {
-          console.error(error);
-        });
+      return DB.client.close()
     } else {
-      console.error('close: client is undefined');
+      console.error('On MongoDB closing: client is undefined\n')
+      return new MongoError('DB client is undefined')
     }
   }
 
-  public static getDB(db?: string): Db {
+  public static getDB(db?: string): Db | undefined {
+
+    if (!DB || !DB.client)
+      return
 
     return DB.client.db(db ? db : DB.instance.dbName)
   }
+
   public static getCollection(collections: string, db?: string): Collection {
 
     return DB.client.db(db ? db : DB.instance.dbName).collection(collections)
@@ -131,50 +118,39 @@ class DB {
  **/
 
 import { RedisClientOptions } from './serverconfig/serverOptions';
-import * as redis from 'redis';
-import { isNumber } from 'util';
+import { createClient, RedisClient, ClientOpts } from 'redis';
+import makeLibraryDb from './library-db';
+import makeBookDb from './book-db';
 
 interface MemCacheConnectStatus {
+
   status: string;
-  cb: redis.RedisClient;
+  cb: RedisClient;
   message?: string;
 }
+
 class MemCache {
 
-  private client!: redis.RedisClient;
+  private client!: RedisClient;
 
   constructor() { }
 
-  public connect(reconnectAfter?: number, options?: redis.ClientOpts): MemCacheConnectStatus {
+  public connect(reconnectAfter?: number, options?: ClientOpts): MemCacheConnectStatus {
 
     console.log(`Trying connect to ... ${memobj.dbname} at ${memobj._comment}`)
 
-
     // DataBase Redis for MiddleWare Caching
-    this.client = redis.createClient(options ? options : RedisClientOptions(memobj.host, memobj.port, memobj.password));
+    this.client = createClient(options ? options : RedisClientOptions(memobj.host, memobj.port, memobj.password));
 
     this.client.on('connect', () => {
       console.log('Redis connected!'/* , memobj._subscription */)
     })
 
-    process.on('exit', () => {
-
-      this.client.quit()
-      process.exit(200)
-    });
-
-    process.on('SIGINT', () => {
-
-      this.client.quit()
-      console.log('Redis client quit');
-      process.exit(200)
-    });
-
     this.client.on('error', (error) => {
       console.log((new Date()) + 'Redis: disconnected!', error)
 
       // case reconnect after set
-      if (isNumber(reconnectAfter) && reconnectAfter > 0) {
+      if (typeof reconnectAfter === 'number' && reconnectAfter > 0 && reconnectAfter <= 3) {
 
         setTimeout(this.connect, reconnectAfter);
 
@@ -182,8 +158,51 @@ class MemCache {
 
     })
 
+    process.on('exit', async () => {
+
+
+      await dbDisconnect(this.client)
+    });
+
+    process.on('SIGINT', async () => {
+
+
+      await dbDisconnect(this.client)
+    });
+
     return { status: 'ok', cb: this.client }
   }
 }
 
-export { DB, MemCache, memjs, memjsonIndexOf, jdb }
+async function dbDisconnect(client: { quit: () => any; }) {
+  const stats: any = await DB.getDB()?.stats()
+  DB.disconnect()
+    ///@ts-ignore
+    .then(v => { if (DB.client !== undefined) console.log(`${JSON.stringify(stats)} MongoDB connections closed from ${JSON.stringify(stats?.db)}`); })
+    .catch((error: MongoError) => {
+      console.error(error);
+    })
+    .finally(() => {
+
+      if (client.quit()) console.log('Redis connections closed')
+      process.exit(200)
+    })
+}
+
+
+// makeDb()
+// Check DB Connection
+export async function makeDb() {
+
+  // trying to reconnect
+  if (DB === undefined || !DB.isConnected())
+    await DB.connect(mongoUri, mongoCFG)
+
+  return DB.getDB(dbName)
+}
+
+const LibraryDB = makeLibraryDb({ makeDb })
+const BookDB = makeBookDb({ makeDb })
+
+
+export { DB, MemCache, memjs, mongoCFG, LibraryDB, BookDB }

@@ -4,10 +4,10 @@ import { utype } from './datamodel'
 import { isString, isArray } from 'util';
 import { Category, ICategory } from '../db/models';
 import { Mongoose } from 'mongoose';
-
+import { v1 as uuidv1, v4 as uuidv4, v5 as uuidv5, v5 as uuidv5_, } from 'uuid';
 export const debug = { explain: false }
 
-import * as bcrypt from 'bcrypt'
+import { compareSync, genSaltSync, hashSync } from 'bcrypt'
 
 class GBRoutines {
 
@@ -23,19 +23,24 @@ class GBRoutines {
 
         switch (version) {
             case 'timestamp':
-                const uuidv1 = require('uuid/v1')
+                // const { v1: uuidv1 } = require('uuid');
                 return uuidv1()
                 break
             case 'random':
-                const uuidv5_ = require('uuid/v5')
-                return uuidv5_()
+                // const { v5_: uuidv5_ } = require('uuid');
+                const v4options = {
+                    random: [
+                        0x10, 0x91, 0x56, 0xbe, 0xc4, 0xfb, 0xc1, 0xea, 0x71, 0xb4, 0xef, 0xe1, 0x67, 0x1c, 0x58, 0x36,
+                    ],
+                };
+                return uuidv4(v4options)
                 break
             case 'UUID':
-                const uuidv4 = require('uuid/v4')
+                // const { v4: uuidv4 } = require('uuid');
                 return uuidv4()
                 break
             default:
-                const uuidv5 = require('uuid/v5')
+                // const { v5: uuidv5 } = require('uuid');
                 // ... using predefined URL namespace (for, well, URLs) 
                 uuidv5('mail.technicalprb.com', uuidv5['URL'])
                 return uuidv5['URL']
@@ -59,7 +64,7 @@ class GBRoutines {
                 source: source || '',
             }, // User Agent we get from headers
             referrer: res.header('referrer') || '', //  Likewise for referrer
-            ip: res.header('x-forwarded-for') || res.connection.remoteAddress, // Get IP - allow for proxy
+            ip: res.header('x-forwarded-for') || res.socket!.remoteAddress, // Get IP - allow for proxy
             device: { // Get screen info that we passed in url post data
                 OsUUID: machineId,
                 type: '' // res.device.type.toUpperCase()
@@ -74,12 +79,12 @@ class GBRoutines {
 
         //Hashes the password sent by the user for login and checks if the hashed password stored in the 
         //database matches the one sent. Returns true if it does else false.
-        return bcrypt.compareSync(password, user.password)
+        return compareSync(password, user.password)
     }
 
     // Generates hash using bCrypt
     public createHash(password: string) {
-        return bcrypt.hashSync(password, bcrypt.genSaltSync(10));
+        return hashSync(password, genSaltSync(10));
     }
 
     public Variablevalid(s: any) {
@@ -120,7 +125,7 @@ class GBRoutines {
             //each node will have children, so let's give it a "children" poperty
             datum.children = [];
 
-                console.log(datum)
+            console.log(datum)
             //add an entry for this node to the map so that any future children can
             //lookup the parent
             idToNodeMap[datum._id] = datum;

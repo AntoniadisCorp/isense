@@ -1,20 +1,17 @@
-import { Request, Response, NextFunction, Router } from 'express'
-
-import * as express from 'express'
-import { Emailer, GBRoutines, debug, isAuth, isJwtAuth, gbr, upload, createBookCase, shiftRByKey, shiftRsortNo, shiftLsortNo, shiftLByKey, OptionEntry, STORAGE_DEFAULT_DIR, missNoArray, getMinMax } from '../global'
-import { machineId, machineIdSync } from 'node-machine-id';
-
-// import { mainRouter } from './'
-import { DB, jdb, MemCache } from '../db/net'
-import { ICategory, Category, addHierarchyCategory, rebuildHierarchyCategory, reconstructDescendants, updateAncestryCategory, setBook, Book, saveBookInDb, updateBookinDB, getBookFromDb } from '../db/models'
 /* import { Mongoose, mongo } from 'mongoose'; */
 import { ObjectId } from 'bson';
-import { Collection, WriteOpResult, InsertOneWriteOpResult, UpdateWriteOpResult, FindAndModifyWriteOpResultObject, FilterQuery, CursorResult, Cursor } from 'mongodb';
+import * as express from 'express';
+import { NextFunction, Request, Response, Router } from 'express';
+import { Collection, } from 'mongodb';
+import { getBook, getLibrary } from '../controllers';
+import { addHierarchyCategory, getBookFromDb, ICategory, reconstructDescendants, saveBookInDb, updateAncestryCategory, updateBookinDB } from '../db/models';
+// import { mainRouter } from './'
+import { DB, MemCache } from '../db/net';
+import { makeExpressCallback } from '../express-callback';
+import { debug, gbr, getMinMax, isJwtAuth, missNoArray, OptionEntry, dateFormatSystem } from '../global';
 
-import { fileImgError, ExpressMulterFile, storagePath, AVATAR_DEFAULT_DIR } from '../db/models/image';
-import { UploadedFile } from 'express-fileupload';
 
-var arrayToTree = require('array-to-tree');
+// var arrayToTree = require('array-to-tree');
 
 
 interface tk103Device {
@@ -81,6 +78,7 @@ class Tasks {
         })
 
         const random = (req: Request, res: Response) => {
+            // const httpRequest =  adaptRequest(req)
             res.status(200).json({ code: 200, status: 'success', data: { result: Math.floor(Math.random() * 100) } });
         }
 
@@ -88,13 +86,14 @@ class Tasks {
         this.router.get('/random', isJwtAuth, random)
 
         // LIBRARY
-        this.router.get('/library/search', isJwtAuth, this.SearchByfilter) // Search for Libraries
-        this.router.get('/library/search/:id', isJwtAuth, this.getBookById); // Get Single task
+        this.router.get('/library/search', isJwtAuth, makeExpressCallback(getLibrary)) // Search for Libraries
+        this.router.get('/library/search/:id', isJwtAuth, makeExpressCallback(getBook)); // Get Single task
         this.router.get('/library/book/search', isJwtAuth, this.SearchTasks) // Search for Libraries
         this.router.get('/library/book/sku', isJwtAuth, this.getSKU)
         this.router.get('/library/space/search', isJwtAuth, this.SearchTasks) // Search for Libraries Space
 
         // CATEGORY
+        this.router.get('/library/space/category/search', isJwtAuth, this.tbCategorySearch) // table search of category tab
         this.router.get('/library/categories/:id', isJwtAuth, this.getTasks)
 
         this.router.get('/categories', isJwtAuth, this.getTasks); // Get All Tasks
@@ -228,7 +227,7 @@ class Tasks {
 
         const dbCollection: Collection = DB.getCollection('book')
 
-        let k = await dbCollection.find({}, { fields: { SKU: 1 } }).min({ SKU: 0 }).max({ SKU: 1000 }).hint({ SKU: 1 }).limit(100).toArray()
+        let k = await dbCollection.find({}, { projection: { SKU: 1 } }).min({ SKU: 0 }).max({ SKU: 1000 }).hint({ SKU: 1 }).limit(100).toArray()
 
 
         if (k) {
@@ -255,7 +254,7 @@ class Tasks {
     async getTasks(req: Request, res: Response, next: NextFunction) {
 
         try {
-            const queryParams = req.query;
+            const queryParams = req.query as any;
 
             if (!DB.isConnected()) { // trying to reconnect
                 await DB.connect();
@@ -294,6 +293,8 @@ class Tasks {
         }
         catch (error) {
             res.status(500).json({ code: 500, status: 'tryCatchError', error: error })
+        } finally {
+            // await DB.disconnect();
         }
     }
 
@@ -304,7 +305,7 @@ class Tasks {
         try {
 
             // find for firstname and lastname and mobile
-            const queryParams = req.query;
+            const queryParams = req.query as any
             if (!DB.isConnected()) { // trying to reconnect
                 await DB.connect();
             } else {
@@ -347,6 +348,8 @@ class Tasks {
         catch (error) {
             console.log(error)
             res.status(500).json({ code: 500, status: 'error', error: error })
+        } finally {
+            // await DB.disconnect();
         }
     }
 
@@ -374,7 +377,7 @@ class Tasks {
 
                 dbCollection.find(query)
                     .toArray(
-                        (err: any, result: any[]) => {
+                        (err: any, result: any) => {
                             // callback
                             if (err) {
                                 if (debug.explain) console.error(err)
@@ -401,8 +404,9 @@ class Tasks {
         catch (error) {
             console.log(error)
             res.status(500).json({ code: 500, status: 'error', error: error })
+        } finally {
+            // await DB.disconnect();
         }
-
 
     }
 
@@ -410,7 +414,7 @@ class Tasks {
 
         try {
             // find for firstname and lastname and mobile
-            const queryParams = req.query;
+            const queryParams = req.query as any;
 
             // Check DB Connection
             if (!DB.isConnected()) { // trying to reconnect
@@ -436,7 +440,7 @@ class Tasks {
 
                 dbCollection.find(query)
                     .toArray(
-                        (err: any, result: any[]) => {
+                        (err: any, result: any) => {
                             // callback
                             if (err) {
                                 console.error(err)
@@ -463,6 +467,122 @@ class Tasks {
         } catch (error) {
             console.log(error)
             res.status(500).json({ code: 500, status: 'error', error: error })
+        } finally {
+            // await DB.disconnect();
+        }
+    }
+
+    // mongodump --archive=test.20150715.gz --gzip --host localhost --port 27017 --db dbsense --out "E:\Backup\bibliotecData"; 
+
+    async tbCategorySearch(req: Request, res: Response, next: NextFunction) {
+
+        try {
+
+            // Check DB Connection
+            if (!DB.isConnected()) { // trying to reconnect
+                await DB.connect();
+            }
+
+            // find for firstname and lastname and mobile
+            const queryParams = req.query as any;
+            let objSort: { [x: string]: any } = {}
+
+            // console.log(queryParams.refField)
+
+            const refField: string = queryParams.refField ? JSON.parse(queryParams.refField) : '' || ''
+            const extrafilters: any = refField.length > 0 ? refField : [{}]
+
+            const
+                filter = queryParams.filter || '',
+                _id = queryParams._id || null,
+                SKU = queryParams.SKU || filter,
+                sortActive = queryParams.sortActive || '',
+                sortOrder = queryParams.sortOrder || '',
+                pageNumber = parseInt(queryParams.pageNumber) || 1,
+                pageSize = parseInt(queryParams.pageSize) || 10,
+                collectionName: string = queryParams.col,
+                dbCollection: Collection = DB.getCollection(collectionName)
+
+            console.log(`Start search in ${collectionName} by ${filter}`)
+
+            // Sorting Direction
+            const sortDirection = sortOrder && sortOrder === 'asc' ? 1 : -1
+
+            if (sortActive && sortActive !== '')
+                objSort[sortActive] = sortDirection
+
+            // if Sorting Removed switch sorting to default by _id
+            const sort = sortOrder && sortOrder !== '' ? objSort : { _id: -1 }
+
+
+            // text filtering or searching
+            const /* regex2 = Number(SKU), */
+                regex = new RegExp(gbr.escapeRegex(filter), 'gi')
+
+
+            // ExtraFilters
+            if (extrafilters.length && extrafilters[0].categoryId)
+                extrafilters[0].categoryId = new ObjectId(extrafilters[0].categoryId as string)
+
+            console.log(`search in ${collectionName} by ${filter} ${regex.source}`, queryParams.refField)
+
+
+
+            // Create Query
+            let query: any =
+                (filter === '') ? {
+                    $and: extrafilters,
+                    recyclebin: false
+                } : {
+                    $or: [
+                        /* { $text: { $search: regex.source }, }, */
+                        { 'name': { $regex: regex } },
+                        { 'tree.name': { $regex: regex } },
+                        { 'desc': { $regex: regex } },
+                        { 'date_modified': { $gte: dateFormatSystem(new Date(filter)) } }, // yyyy-mm-dd
+                        { 'date_added': { $gte: dateFormatSystem(new Date(filter)) } }, // yyyy-mm-dd
+                    ],
+                    $and: extrafilters,
+                    recyclebin: false
+                }
+            if (_id) {
+                query._id = new ObjectId(_id)
+            }
+
+            let tblCollection: any[] = await dbCollection.find(query)
+                .sort(sort)
+                .skip((pageSize * pageNumber) - pageSize)
+                .limit(pageSize)
+                .toArray()
+            // .catch((err:any) => { res.status(505).json({ code: 505, status: 'error', error: err }); })
+
+
+            if (!tblCollection)
+                return res.status(505).json({ code: 505, status: 'DBerror', error: 'cannot retrieve data on table..' });
+
+            dbCollection.countDocuments(query, {})
+                .then((count: number) => {
+
+                    res.status(200).json({
+                        code: 200,
+                        status: 'success',
+                        data: {
+                            result: tblCollection,
+                            current: pageNumber,
+                            pages: Math.ceil(count / pageSize),
+                            count,
+                            message: ``
+                        }
+                    })
+                }).catch(err => {
+                    return res.status(505).json({ code: 505, status: 'error', error: err })
+                })
+
+        } catch (error) {
+            console.log(error)
+            res.status(500).json({ code: 500, status: 'error', error: error })
+        } finally {
+            // await DB.disconnect()
         }
     }
 
@@ -470,127 +590,130 @@ class Tasks {
 
         try {
             // find for firstname and lastname and mobile
-            const queryParams = req.query;
+            const queryParams = req.query as any;
 
             // Check DB Connection
             if (!DB.isConnected()) { // trying to reconnect
                 await DB.connect();
-            } else {
-                console.log(queryParams.refField)
-
-                const refField: string = queryParams.refField ? JSON.parse(queryParams.refField) : '' || ''
-                const extrafilters: any = refField.length > 0 ? refField : [{}]
-
-                const
-                    filter = queryParams.filter || '',
-                    _id = queryParams._id || null,
-                    SKU = queryParams.SKU || filter,
-                    sortActive = queryParams.sortActive || '',
-                    sortOrder = queryParams.sortOrder || '',
-                    pageNumber = parseInt(queryParams.pageNumber) || 1,
-                    pageSize = parseInt(queryParams.pageSize) || 10,
-                    collectionName: string = queryParams.col,
-                    dbCollection: Collection = DB.getCollection(collectionName);
-
-                console.log(`Start search in ${collectionName} by ${filter}`)
-
-                if (SKU) SKU.replace(/\D/g, '')
-
-                const sortDirection = sortOrder && sortOrder === 'asc' ? 1 : -1
-                let objSort: { [x: string]: any } = {}
-
-                if (sortActive && sortActive !== '')
-                    objSort[sortActive] = sortDirection
-
-                const sort = sortOrder && sortOrder !== '' ? objSort : { _id: -1 }
-
-                const regex2 = Number(SKU),
-                    regex = new RegExp(gbr.escapeRegex(filter), 'gi')
-
-
-                console.log(`search in ${collectionName} by ${filter} or ${regex2 ? regex2 : ''}, ${regex.source}`, queryParams.refField)
-
-                if (extrafilters.length && extrafilters[0].categoryId)
-                    extrafilters[0].categoryId = new ObjectId(extrafilters[0].categoryId as string)
-
-                let query: FilterQuery<any> =
-                    (filter === '') ? {
-                        $and: extrafilters,
-                        recyclebin: false
-                    } : {
-                            $or: [
-                                /* { $text: { $search: regex.source }, }, */
-                                { 'name': { $regex: regex } },
-                                { 'SKU': regex2 },
-                                { 'skuid': { $regex: regex } },
-                                { 'whatnot': { $regex: regex } },
-                                { 'bookshelf': { $regex: regex } },
-                            ],
-                            $and: extrafilters,
-                            recyclebin: false
-                        }
-                if (_id) {
-                    query._id = new ObjectId(_id)
-                }
-
-
-                let tblCollection: any[] = await dbCollection.find(query)
-                    .sort(sort)
-                    .skip((pageSize * pageNumber) - pageSize)
-                    .limit(pageSize)
-                    .toArray()
-                // .catch((err:any) => { res.status(505).json({ code: 505, status: 'error', error: err }); })
-
-
-                if (!tblCollection)
-                    return res.status(505).json({ code: 505, status: 'DBerror', error: 'cannot retrieve data of the table..' });
-
-                if (collectionName === 'book') {
-
-                    let myArray: any[] = tblCollection.map<any>(v => new ObjectId(v._id))
-
-                    // console.log(tblCollection.map<ObjectId>(v => new ObjectId(v._id)))
-                    let k: Cursor<any> = await DB.getCollection('bookcase')
-                        .find({
-                            'books.arrIndex._id': { $in: tblCollection.map<ObjectId>(v => new ObjectId(v._id)) },
-                        }, {
-                            fields: { 'books.arrIndex': 1 }
-                        })
-
-                    k.forEach((item: any) => {
-
-                        let myarray2: any[] = item.books.arrIndex
-                        myArray.forEach((element, i) => {
-                            const index = myarray2.findIndex(v => element.equals(v._id))
-                            if (index > -1) tblCollection[i].bookcase.bookshelfNo = myarray2[index].bookshelfNo
-                        })
-
-                        // console.log(item, item.books.arrIndex)
-                    })
-                }
-
-
-                dbCollection.countDocuments(query)
-                    .then((count: number) => {
-
-                        res.status(200).json({
-                            code: 200,
-                            status: 'success',
-                            data: {
-                                result: tblCollection,
-                                current: pageNumber,
-                                pages: Math.ceil(count / pageSize),
-                                count,
-                                message: ``
-                            }
-                        })
-                    }).catch(err => {
-                        return res.status(505).json({ code: 505, status: 'error', error: err })
-                    })
             }
+
+            console.log(queryParams.refField)
+
+            const refField: string = queryParams.refField ? JSON.parse(queryParams.refField) : '' || ''
+            const extrafilters: any = refField.length > 0 ? refField : [{}]
+
+            const
+                filter = queryParams.filter || '',
+                _id = queryParams._id || null,
+                SKU = queryParams.SKU || filter,
+                sortActive = queryParams.sortActive || '',
+                sortOrder = queryParams.sortOrder || '',
+                pageNumber = parseInt(queryParams.pageNumber) || 1,
+                pageSize = parseInt(queryParams.pageSize) || 10,
+                collectionName: string = queryParams.col,
+                dbCollection: Collection = DB.getCollection(collectionName);
+
+            console.log(`Start search in ${collectionName} by ${filter}`)
+
+            if (SKU) SKU.replace(/\D/g, '')
+
+            const sortDirection = sortOrder && sortOrder === 'asc' ? 1 : -1
+            let objSort: { [x: string]: any } = {}
+
+            if (sortActive && sortActive !== '')
+                objSort[sortActive] = sortDirection
+
+            const sort = sortOrder && sortOrder !== '' ? objSort : { _id: -1 }
+
+            const regex2 = Number(SKU),
+                regex = new RegExp(gbr.escapeRegex(filter), 'gi')
+
+
+            console.log(`search in ${collectionName} by ${filter} or ${regex2 ? regex2 : ''}, ${regex.source}`, queryParams.refField)
+
+            if (extrafilters.length && extrafilters[0].categoryId)
+                extrafilters[0].categoryId = new ObjectId(extrafilters[0].categoryId as string)
+
+            let query: any =
+                (filter === '') ? {
+                    $and: extrafilters,
+                    recyclebin: false
+                } : {
+                    $or: [
+                        /* { $text: { $search: regex.source }, }, */
+                        { 'name': { $regex: regex } },
+                        { 'SKU': regex2 },
+                        { 'skuid': { $regex: regex } },
+                        { 'whatnot': { $regex: regex } },
+                        { 'bookshelf': { $regex: regex } },
+                    ],
+                    $and: extrafilters,
+                    recyclebin: false
+                }
+            if (_id) {
+                query._id = new ObjectId(_id)
+            }
+
+
+            let tblCollection: any[] = await dbCollection.find(query)
+                .sort(sort)
+                .skip((pageSize * pageNumber) - pageSize)
+                .limit(pageSize)
+                .toArray()
+            // .catch((err:any) => { res.status(505).json({ code: 505, status: 'error', error: err }); })
+
+
+            if (!tblCollection)
+                return res.status(505).json({ code: 505, status: 'DBerror', error: 'cannot retrieve data of the table..' });
+
+            if (collectionName === 'book') {
+
+                let myArray: any[] = tblCollection.map<any>(v => new ObjectId(v._id))
+
+                // console.log(tblCollection.map<ObjectId>(v => new ObjectId(v._id)))
+                let k: any = await DB.getCollection('bookcase')
+                    .find({
+                        'books.arrIndex._id': { $in: tblCollection.map<ObjectId>(v => new ObjectId(v._id)) },
+                    }, {
+                        projection: { 'books.arrIndex': 1 }
+                    })
+
+                k.forEach((item: any) => {
+
+                    let myarray2: any[] = item.books.arrIndex
+                    myArray.forEach((element, i) => {
+                        const index = myarray2.findIndex(v => element.equals(v._id))
+                        if (index > -1) tblCollection[i].bookcase.bookshelfNo = myarray2[index].bookshelfNo
+                    })
+
+                    // console.log(item, item.books.arrIndex)
+                })
+            }
+
+
+            dbCollection.countDocuments(query, {})
+                .then((count: number) => {
+
+                    res.status(200).json({
+                        code: 200,
+                        status: 'success',
+                        data: {
+                            result: tblCollection,
+                            current: pageNumber,
+                            pages: Math.ceil(count / pageSize),
+                            count,
+                            message: ``
+                        }
+                    })
+                }).catch(err => {
+                    return res.status(505).json({ code: 505, status: 'error', error: err })
+                })
+
         } catch (error) {
             console.log(error)
             res.status(500).json({ code: 500, status: 'error', error: error })
+        } finally {
+            // DB.disconnect();
         }
 
     }
@@ -666,7 +789,7 @@ class Tasks {
 
                 console.log('Data Obj ->>> ', jsonObj.data)
 
-                dbCollection.save(jsonObj.data, (err: any, result) => {
+                dbCollection.updateOne(jsonObj.data, (err: any, result: any) => {
 
                     console.log(err)
                     if (err) { res.status(500).json({ code: 500, status: 'DbError', error: err }); }
@@ -676,6 +799,8 @@ class Tasks {
             }
         } catch (error) {
             res.status(500).json({ code: 500, status: 'tryCatchError', error: error })
+        } finally {
+            // await DB.disconnect();
         }
 
         // Delay the execution of findOrSignup and execute 
@@ -695,7 +820,7 @@ class Tasks {
                 })
         }
 
-        const queryParams = req.query
+        const queryParams = req.query as any
 
         const _id = ObjectId.isValid(req.params.id) ? new ObjectId(req.params.id) : Number(req.params.id)
 
@@ -712,7 +837,7 @@ class Tasks {
 
         try {
             // find for firstname and lastname and mobile
-            const queryParams = req.query
+            const queryParams = req.query as any
 
             // Check DB Connection
             if (!DB.isConnected()) { // trying to reconnect
@@ -741,6 +866,8 @@ class Tasks {
         } catch (error) {
             console.log(error)
             res.status(500).json({ code: 500, status: 'error', error: error })
+        } finally {
+            // await DB.disconnect();
         }
 
         // Delay the execution of findOrSignup and execute 
@@ -768,10 +895,12 @@ class Tasks {
             console.log(req.params.id)
             let dbCollection: Collection = DB.getCollection('product');
 
-            dbCollection.update({ _id: new ObjectId(req.params.id) }, updTask, {}, function (err: any, tasks: Object) {
-                if (err) res.send(err);
+            dbCollection.updateOne({ _id: new ObjectId(req.params.id) }, updTask, {}).then((tasks: any) => {
                 res.json(tasks);
-            });
+            },
+                (err: any) => {
+                    if (err) res.send(err);
+                });
         }
     }
 
@@ -793,7 +922,7 @@ class Tasks {
                 dbCollection.updateOne({
                     _id: ObjectId.isValid(Params.id) ? new ObjectId(Params.id) :
                         Number(Params.id), recyclebin: false
-                }, { $set: { recyclebin: true } }, { w: "majority", wtimeout: 100/* , upsert: true  */ }, (err: any, result: any) => {
+                }, { $set: { recyclebin: true } }, { /*w: "majority", wtimeout: 100 , upsert: true  */ }, (err: any, result: any) => {
 
                     if (err) { res.status(505).json({ code: 505, status: 'error', error: err }); }
                     res.status(200).json({ code: 200, status: 'success', data: { result } });
@@ -802,6 +931,8 @@ class Tasks {
         } catch (error) {
             console.log(error)
             res.status(500).json({ code: 500, status: 'error', error: error })
+        } finally {
+            // await DB.disconnect();
         }
 
         // Delay the execution of findOrSignup and execute 
@@ -867,6 +998,8 @@ class Tasks {
         } catch (error) {
             console.log(error)
             res.status(500).json({ code: 500, status: 'tryCatchError', error: error })
+        } finally {
+            // await DB.disconnect();
         }
 
     }
@@ -900,7 +1033,7 @@ class Tasks {
 
                 /* first reconstruct Children of Parent */
 
-                const nodes = await dbCollection.find({ parentId: _id, recyclebin: false }, { fields: { _id: 1 } }).toArray()
+                const nodes = await dbCollection.find({ parentId: _id, recyclebin: false }, { projection: { _id: 1 } }).toArray()
 
                 let parentToChild: any
 
@@ -914,7 +1047,7 @@ class Tasks {
                                 recyclebin: false
                             },
                             {
-                                fields: { '_id': 1 },
+                                projection: { '_id': 1 },
                             })
 
                     // console.log(parentToChild)
@@ -925,14 +1058,14 @@ class Tasks {
 
 
                         // get Parent's Id of current node
-                        const children = await dbCollection.findOne({ _id, recyclebin: false }, { fields: { parentId: 1 } })
+                        const children: any = await dbCollection.findOne({ _id, recyclebin: false }, { projection: { parentId: 1 } })
 
                         const Rescat = await updateAncestryCategory(dbCollection, child._id, {
                             parentId: children.parentId, date_modified: new Date(),
                             root: !children.parentId
                         })
 
-                        if (!!Rescat.result.nModified) {
+                        if (Rescat && Rescat.modifiedCount > 0) {
                             if (children.parentId)
                                 await addHierarchyCategory(child._id, children.parentId)
                             else if (children.parentId == null)
@@ -945,13 +1078,13 @@ class Tasks {
 
                 const Rescat = await updateAncestryCategory(dbCollection, _id, set)
 
-                if (!!Rescat.result.nModified) {
+                if (Rescat && Rescat.modifiedCount > 0) {
 
                     /* Rename Category if needed */
                     if (updatedObj.name.toLowerCase() !== updatedObj.slug) {
 
                         // Next, you need to update each descendant’s ancestors list
-                        dbCollection.update({ 'tree._id': _id }, { '$set': { 'tree.$.name': updatedObj.name, 'tree.$.slug': updatedObj.name.toLowerCase() } }, { multi: true })
+                        dbCollection.updateMany({ 'tree._id': _id }, { '$set': { 'tree.$.name': updatedObj.name, 'tree.$.slug': updatedObj.name.toLowerCase() } })
                     }
 
                     /**
@@ -977,6 +1110,8 @@ class Tasks {
         } catch (error) {
             console.log(error)
             res.status(500).json({ code: 500, status: 'tryCatchError', error: error })
+        } finally {
+            // await DB.disconnect();
         }
     }
 
@@ -1001,14 +1136,14 @@ class Tasks {
 
                 console.log('Data Obj ->>> ', jsonObj.data)
 
-                let oldValues: WriteOpResult = { ops: [], connection: undefined, result: true }
+                let oldValues: any = { ops: [], connection: undefined, result: true }
                 // remove, update old bookshelves as unused
-                if (jsonObj.dataPlus) oldValues = await dbCollection.update({ whatnot: jsonObj.dataPlus.whatnot, 'bookshelves.name': jsonObj.dataPlus.bookshelf }, {
+                if (jsonObj.dataPlus) oldValues = await dbCollection.updateOne({ whatnot: jsonObj.dataPlus.whatnot, 'bookshelves.name': jsonObj.dataPlus.bookshelf }, {
                     $set: { 'bookshelves.$.used': false }
                 })
 
                 if (oldValues.result)
-                    dbCollection.update({ whatnot: jsonObj.data.whatnot, 'bookshelves.name': jsonObj.data.bookshelf }, {
+                    dbCollection.updateOne({ whatnot: jsonObj.data.whatnot, 'bookshelves.name': jsonObj.data.bookshelf }, {
                         $set: { 'bookshelves.$.used': true }
                     }, (err: any) => {
 
@@ -1023,6 +1158,8 @@ class Tasks {
         } catch (error) {
             next({ code: 500, status: 'tryCatchError', error: error })
             // res.status(500).json()
+        } finally {
+            // await DB.disconnect();
         }
 
     }
@@ -1035,12 +1172,11 @@ class Tasks {
             // Check DB Connection
             if (!DB.isConnected()) { // trying to reconnect
                 await DB.connect()
-                // DB.disconnect()
             } else {
                 const dbCollection: Collection = DB.getCollection('libraryspace') // jsonObj.col
 
                 console.error('jsonObj:', jsonObj)
-                dbCollection.update({ whatnot: jsonObj.data.whatnot, 'bookshelves.name': jsonObj.data.bookshelf }, {
+                dbCollection.updateOne({ whatnot: jsonObj.data.whatnot, 'bookshelves.name': jsonObj.data.bookshelf }, {
                     $set: { 'bookshelves.$.used': false }
                 }, (err: any) => {
 
@@ -1056,8 +1192,26 @@ class Tasks {
         } catch (error) {
             next({ code: 500, status: 'tryCatchError', error: error })
             // res.status(500).json()
+        } finally {
+            // await DB.disconnect();
         }
     }
 }
 
-export { Tasks }
+export { Tasks };
+/* export default function adaptRequest (req: {path: any, method: any, params: any, query: any, body: any} = {
+    path: undefined,
+    method: undefined,
+    params: undefined,
+    query: undefined,
+    body: undefined
+}) {
+    return Object.freeze({
+      path: req.path,
+      method: req.method,
+      pathParams: req.params,
+      queryParams: req.query,
+      body: req.body
+    })
+  } */
+

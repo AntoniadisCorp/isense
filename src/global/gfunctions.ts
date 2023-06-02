@@ -8,10 +8,12 @@ export const gbr = new GBRoutines();
 import fpath from 'path'
 import { NextFunction } from "express";
 import { DB } from '../db';
-import { Collection, ObjectId } from 'mongodb';
-import { listen, ServerOptions } from 'socket.io'
-import { Sockets } from '.';
+// import { Collection, ObjectId } from 'mongodb';
+import { Server, ServerOptions } from 'socket.io'
+
+import { CLIENT_DEFAULT_HOST, Sockets } from '.';
 import { IMAGE_DEFAULT_DIR } from '../db/models';
+import { Collection, ObjectId } from 'mongodb';
 
 export function getMinMax(arr: Array<any>) {
   return arr.reduce(({ min, max }, v) => ({
@@ -78,7 +80,7 @@ export const isAuth = (req: any, res: any, next: any) => {
 
 export const isJwtAuth = (req: any, res: any, next: NextFunction) => {
 
-  return passport.authenticate('jwt', { session: false }, (err, jwtPayload) => {
+  return passport.authenticate('jwt', { session: false }, (err: any, jwtPayload: any) => {
 
     if (err || !jwtPayload)
       return res.status(401).json(jsonStatusError);
@@ -118,8 +120,9 @@ export let upload = multer({
     if (file.mimetype == "image/png" || file.mimetype == "image/jpg" || file.mimetype == "image/jpeg") {
       cb(null, true);
     } else {
-      cb(null, false);
-      return cb(new Error('Only .png, .jpg and .jpeg format allowed!'), true);
+      cb(null, false)
+      let k = new Error('Only .png, .jpg and .jpeg format allowed!')
+      // return cb(k, true)
     }
   }
 })
@@ -135,7 +138,7 @@ export async function createBookCase(newBookCase: any, bookId: number): Promise<
     } else {
       let dbCollection: Collection = DB.getCollection('bookcase')
       newBookCase.bookId = new ObjectId(bookId)
-      dbCollection.save(newBookCase, (err: any, result: any) => {
+      dbCollection.insertMany(newBookCase, (err: any, result: any) => {
         if (err) { return { code: 500, status: 'error', error: err } }
 
         return {
@@ -199,6 +202,25 @@ export function shiftLByKey(myArray: any[], index: number, value: any) {
 export function sockAttach(server: any, opt?: ServerOptions | undefined): void {
 
   let socketObject: Sockets = new Sockets()
-  socketObject.attach(listen(server, opt))
+  socketObject.attach(new Server(server, {
+    cors: {
+      origin: CLIENT_DEFAULT_HOST,
+      methods: ["PUT", "GET", "POST", "DELETE", "OPTIONS"],
+      allowedHeaders: ["secretHeader"],
+      credentials: true
+    }
+  }))
 }
 
+export function dateFormatSystem(current_datetime: Date): Date {
+
+  let formatted_date: string = current_datetime.getFullYear() + "-" +
+    (current_datetime.getMonth() + 1) + "-" +
+    current_datetime.getDate() + " " +
+    current_datetime.getHours() + ":" +
+    current_datetime.getMinutes() + ":" +
+    current_datetime.getSeconds()
+  // console.log(formatted_date)
+
+  return new Date(formatted_date)
+}

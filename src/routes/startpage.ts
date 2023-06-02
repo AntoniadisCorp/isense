@@ -25,13 +25,12 @@ class mainRouter {
     httpRoutesGets(): void {
 
 
-
         this.router.get('/ServiceLogin', this.ServiceLogin) // get ServiceLogin
 
         const startPage = async (req: Request, res: Response) => {
             let d = { message: 'Hello World!', sessionInfo: '' }
-            if (req.session && req.session!.key) {
-                d = { message: 'Hello Redis World!', sessionInfo: req.session!.key, }
+            if (req.session && req.session!.id) {
+                d = { message: 'Hello Redis World!', sessionInfo: req.session!.id, }
             }
             console.log(d.message)
             res.render('index', d)

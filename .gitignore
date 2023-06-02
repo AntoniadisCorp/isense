@@ -1,3 +1,6 @@
+# OS Junk
+.DS_Store
+
 # Logs
 logs
 *.log
@@ -10,6 +13,9 @@ pids
 *.pid
 *.seed
 *.pid.lock
+
+#config
+webpack.config.js
 
 *.pfx
 *FFF.txt
@@ -32,13 +38,17 @@ bower_components
 # node-waf configuration
 .lock-wscript
 
+# Compiled
+dist
+public
+*.zip
+
 # Compiled binary addons (https://nodejs.org/api/addons.html)
 build/Release
 
 # Dependency directories
 node_modules/
 jspm_packages/
-
 
 # TypeScript v1 declaration files
 typings/
@@ -63,3 +73,7 @@ typings/
 
 # next.js build output
 .next
+
+#in memory mongo
+globalConfigMongo.json
+n

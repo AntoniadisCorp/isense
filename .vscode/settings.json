@@ -1,6 +1,6 @@
 {
     // "workbench.colorTheme": "Default Light+",
-    "terminal.integrated.shell.windows": "C:\\Program Files\\Git\\bin\\bash.exe",
+    // "terminal.integrated.shell.windows": "C:\\Program Files\\Git\\bin\\bash.exe",
     "python.linting.pylintEnabled": true,
     "python.linting.enabled": true,
     "terminal.integrated.rendererType": "dom",
@@ -40,11 +40,15 @@
     "editor.parameterHints.enabled": true,
 
     // Enable semantic Highlighting Color
+    "editor.semanticTokenColorCustomizations": {
+        "enabled": true
+    },
     "editor.tokenColorCustomizations": {
-        "semanticHighlighting": true
+        // "semanticHighlighting": true
         /* "[Material Theme]": {
             "semanticHighlighting": true
         } */
-    }
+    },
+    // "npm.enableScriptExplorer": true
     
 }

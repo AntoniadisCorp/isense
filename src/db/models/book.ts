@@ -1,4 +1,4 @@
-import { ObjectId, Collection, InsertOneWriteOpResult, Cursor, ObjectID, UpdateWriteOpResult, FindAndModifyWriteOpResultObject, CursorResult } from 'mongodb';
+import { ObjectId, Collection, InsertOneResult, UpdateResult, ModifyResult } from 'mongodb';
 import { ImageDef, storagePath, AVATAR_DEFAULT_DIR, AVATAR_DEFAULT_LINK, fileImgError, ExpressMulterFile, IMAGE_DEFAULT_DIR } from './image';
 import { UploadedFile, FileArray } from 'express-fileupload';
 import { OptionEntry, shiftRsortNo, shiftRByKey, STORAGE_DEFAULT_DIR, shiftLsortNo } from '../../global';
@@ -184,7 +184,7 @@ export async function getBookFromDb(_id: ObjectId | number, col: string, exceptF
         recyclebin: false
     }
 
-    let book: Book | null = await dbCollection.findOne(filter, exceptFields)
+    let book: any | null = await dbCollection.findOne(filter, exceptFields)
 
 
     if (!book) {
@@ -222,7 +222,7 @@ export async function getBookFromDb(_id: ObjectId | number, col: string, exceptF
 
 }
 
-export async function saveBookInDb(files: FileArray | undefined, reqBody: any): Promise<OptionEntry> {
+export async function saveBookInDb(files: FileArray | undefined | null, reqBody: any): Promise<OptionEntry> {
 
     if (fileImgError(files)) return ({ code: 404, status: 'imageError', error: 'No files were uploaded.' })
 
@@ -246,12 +246,12 @@ export async function saveBookInDb(files: FileArray | undefined, reqBody: any): 
 
     let bookshelfNo: number = Number(reqBody.bookshelfNo > 0 ? reqBody.bookshelfNo : 0)
 
-    let book: Book = setBook(reqBody, avatarFile)
+    let book: any = setBook(reqBody, avatarFile)
 
     let dbCollection: Collection = DB.getCollection(reqBody.col);
 
     // insert Book to NoSQL DB
-    let skuDuplicate: any = await dbCollection.findOne({ SKU: book.SKU }, { fields: { 'SKU': 1 } })
+    let skuDuplicate: any = await dbCollection.find({ SKU: book.SKU }, { projection: { "SKU": 1 } })
 
 
     if (skuDuplicate)
@@ -260,7 +260,7 @@ export async function saveBookInDb(files: FileArray | undefined, reqBody: any): 
             data: { result: skuDuplicate, message: `Διπλότυπη εγγραφή με κωδικό SKU βιβλίου ${book.SKU} στη συλλογή ${reqBody.col}` }
         })
 
-    let bookWrite: InsertOneWriteOpResult<any> = await dbCollection.insertOne(book)
+    let bookWrite: any = await dbCollection.insertOne(book)
 
     if (bookWrite.result && !!bookWrite.result.ok) {
 
@@ -275,7 +275,7 @@ export async function saveBookInDb(files: FileArray | undefined, reqBody: any): 
     // `File uploaded to ${storageUrl} successful! `
 }
 
-export async function updateBookinDB(files: FileArray | undefined, formData: any): Promise<OptionEntry> {
+export async function updateBookinDB(files: FileArray | undefined | null, formData: any): Promise<OptionEntry> {
 
     if (fileImgError(files)) return ({ code: 404, status: 'imageError', error: 'No files were uploaded.' })
 
@@ -314,11 +314,11 @@ export async function updateBookinDB(files: FileArray | undefined, formData: any
     const dbCollection: Collection = DB.getCollection(formData.col)
 
     // 
-    const ks: UpdateWriteOpResult = await dbCollection.updateOne({ _id: bookId }, { $set: book })
+    const ks: UpdateResult = await dbCollection.updateOne({ _id: bookId }, { $set: book })
 
     // console.log(bookId, `${bookshelfNo} ${oldbookshelfNo}`)
 
-    if (ks.result && !!ks.result.ok) {
+    if (ks && !!ks.acknowledged) {
 
         let bookCaseWrite: OptionEntry = await upBookcaseArrIndex2(bookId, formData.bookcaseId, bookshelfNo, oldbookshelfNo)
 
@@ -336,7 +336,7 @@ async function upBookcaseArrIndex(bookId: ObjectId, bookcaseId: string, bookshel
     const dbCollectionbook: Collection = DB.getCollection('bookcase')
     const _id = new ObjectId(bookcaseId)
 
-    let bookcase: BookCase | null = await dbCollectionbook.findOne({ _id }, { fields: { 'books': 1 } })
+    let bookcase: any = await dbCollectionbook.findOne({ _id }, { projection: { 'books': 1 } })
 
     if (!bookcase) {
         return ({ code: 500, status: 'DbError', error: bookcase })
@@ -355,13 +355,13 @@ async function upBookcaseArrIndex2(bookId: ObjectId, bookcaseId: string, bookshe
     const dbCollectionbook: Collection = DB.getCollection('bookcase')
     // {'books.arrIndex._id': ObjectId('5eb17eed3ea49331186f3fce') }
     // Remove bookId from arrIndex in Bookcase Collection
-    const bookcase: FindAndModifyWriteOpResultObject<any> = await dbCollectionbook.findOneAndUpdate(
+    const bookcase: any = await dbCollectionbook.updateOne(
         { 'books.arrIndex._id': bookId },
         {
             $pull: { 'books.arrIndex': { _id: bookId } },  // remove Item
             $inc: { 'books.count': -1 }, // decrement by arrayFilters bookshelfNo field from index of item that removes
-            $currentDate: { date_modified: true },
-        }, { returnOriginal: false },
+            $currentDate: { lastModified: true },
+        }, /* { returnOriginal: false }, */
     )
 
     // console.log(bookcase.value, bookId)
@@ -423,7 +423,7 @@ async function appendToNextBookcase(_id: ObjectId, bookId: ObjectId, bookshelfNo
 
 
     // append to next book-case
-    let upBookcase: UpdateWriteOpResult = await DB.getCollection('bookcase').updateOne({ _id },
+    let upBookcase: any = await DB.getCollection('bookcase').updateOne({ _id },
         {
             $currentDate: { date_modified: true },
             $inc: { 'books.count': 1 },
@@ -464,7 +464,7 @@ async function appendBookAnywhere(bookId: ObjectId, bookcase: BookCase, bookcase
     // const dbCollectionbook: Collection = DB.getCollection('bookcase')
 
 
-    let upBookcase: UpdateWriteOpResult = await DB.getCollection('bookcase').updateOne({ _id: bookcaseId },
+    let upBookcase: any = await DB.getCollection('bookcase').updateOne({ _id: bookcaseId },
         {
             $currentDate: { date_modified: true },
             $set: { 'books.arrIndex': bookcase.books.arrIndex },
@@ -488,10 +488,10 @@ async function appendBookAnywhere(bookId: ObjectId, bookcase: BookCase, bookcase
 
 async function getBookshelfNo(bookcaseId: string, bookId: string): Promise<BookCase | null> {
 
-    let bcase: BookCase | null = await DB.getCollection('bookcase')
+    let bcase: any | null = await DB.getCollection('bookcase')
         .findOne(
             { _id: new ObjectId(bookcaseId), 'books.arrIndex._id': new ObjectId(bookId) },
-            { fields: { 'books.arrIndex.$bookshelfNo': 1 } }
+            { projection: { 'books.arrIndex.$bookshelfNo': 1 } }
         )
     return bcase
 }

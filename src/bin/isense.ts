@@ -4,7 +4,7 @@
  * Module dependencies.
  */
 import serve from '../app'
-import https, { Server }  from 'https'
+import https, { Server } from 'https'
 import fs from 'fs'
 import { normalize } from 'path';
 import { DB } from '../db';
@@ -12,20 +12,20 @@ import { DB } from '../db';
 // var debug = require('debug')('technica:server');
 
 var enforce = require('express-sslify')
-, key = fs.readFileSync('server-key.pem')
-, cert = fs.readFileSync('server-crt.pem')
-// , pfx = fs.readFileSync('smartdeep.io.pfx')
-, options = {
-  key: key,
-  cert: cert,
- /*   pfx,
-    passphrase: 'For(Life#0)'
-  
-    ca: fsx.readFileSync('ca-crt.pem'),
-    crl: fsx.readFileSync('ca-crl.pem'), 
-    requestCert: true, 
-    rejectUnauthorized: true */ 
-}
+  , key = fs.readFileSync('server-key.pem')
+  , cert = fs.readFileSync('server-crt.pem')
+  // , pfx = fs.readFileSync('smartdeep.io.pfx')
+  , options = {
+    key: key,
+    cert: cert,
+    /*   pfx,
+       passphrase: 'For(Life#0)'
+     
+       ca: fsx.readFileSync('ca-crt.pem'),
+       crl: fsx.readFileSync('ca-crl.pem'), 
+       requestCert: true, 
+       rejectUnauthorized: true */
+  }
 
 
 // http.globalAgent.maxSockets = 100;
@@ -34,7 +34,7 @@ var enforce = require('express-sslify')
  * Get port from environment and store in Express.
  */
 var port = normalizePort(serve.PORT.toString()),
-    ip = serve.IP.toString();
+  ip = serve.IP.toString();
 serve.app.set('port', port);
 serve.app.set('ip', ip);
 
@@ -61,7 +61,7 @@ server.on('listening', onListening);
 let io = serve.socketio
 // whenever a user connects on port 3000 via
 // a websocket, log that a user has connected
-io( server );
+io(server);
 
 
 
@@ -69,16 +69,16 @@ io( server );
  * Event listener for HTTP server "listening" event.
  */
 async function onListening() {
- 
+
   let addr = server.address();
   let bind = typeof addr === 'string'
     ? 'pipe ' + addr
-    : 'port ' + (addr? addr.port: null);
-    try {
-      await DB.connect();
-    } catch (err) {
-      console.error(`Unable to connect to Mongo!`, err);
-    }
+    : 'port ' + (addr ? addr.port : null);
+  try {
+    await DB.connect();
+  } catch (err) {
+    console.error(`Unable to connect to Mongo!`, err);
+  }
   // debug('Listening on ' + bind);
 }
 
@@ -88,8 +88,8 @@ async function onListening() {
 function normalizePort(val: string) {
   var port = parseInt(val, 10);
 
-  if (isNaN(port)) {return val;}	// named pipe
-  if (port >= 0)   {return port;}	// port number
+  if (isNaN(port)) { return val; }	// named pipe
+  if (port >= 0) { return port; }	// port number
   return false;
 }
 
@@ -102,7 +102,7 @@ function onListen() {
 /**
  * Event listener for HTTP server "error" event.
  */
-function onError(error:any) {
+function onError(error: any) {
   if (error.syscall !== 'listen') {
     throw error;
   }

@@ -1,11 +1,15 @@
+import { Server, ServerOptions } from "socket.io";
 class Sockets {
 
 
+
     private currentPrice: number = 99;
+    // @ts-ignore
+    constructor(private io?: Server) {
 
-    constructor(private io?: SocketIO.Server) { }
-
-    attach(appio: SocketIO.Server) {
+    }
+    // @ts-ignore
+    attach(appio: Server) {
 
         this.io = appio
         // this.io.set("origins", "*:*");
