@@ -1,6 +1,6 @@
 import { Request } from 'express';
 
-export default function makeGetBook({ listBook }: any) {
+export function makeGetBook({ listBook }: any) {
     return async function getBookControl(httpRequest: Request) {
         const headers = {
             'Content-Type': 'application/json'
@@ -34,3 +34,37 @@ export default function makeGetBook({ listBook }: any) {
         }
     }
 }
+
+export function makeGetBookBySKU({ listBookBySKU }: any) {
+    return async function listBookBySKU(httpRequest: Request) {
+        const headers = {
+            'Content-Type': 'application/json'
+        }
+        try {
+
+
+            const skuMinMax: any = await listBookBySKU(httpRequest.body)
+
+            return {
+                headers,
+                code: 200,
+                status: 'success',
+                data: {
+                    result: skuMinMax, message: 'Το βιβλίο Βρήθηκε Επιτυχώς'
+                }
+            }
+        } catch (e: any) {
+            // TODO: Error logging
+            console.log(e)
+            return {
+                headers,
+                code: 400,
+                status: 'error',
+                data: {
+                    error: e.message
+                }
+            }
+        }
+    }
+}
+

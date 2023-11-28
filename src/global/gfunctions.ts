@@ -1,19 +1,18 @@
 import passport from 'passport';
-import { GBRoutines } from "./routines";
-import multer from 'multer';
-import { UploadedFile } from "express-fileupload";
-export const randtoken = require('rand-token')
-// export const device = require('express-device')
-export const gbr = new GBRoutines();
-import fpath from 'path'
-import { NextFunction } from "express";
-import { DB } from '../db';
-// import { Collection, ObjectId } from 'mongodb';
+import { Request, Response, NextFunction } from 'express';
+import { FileArray, UploadedFile } from "express-fileupload";
 import { Server, ServerOptions } from 'socket.io'
-
-import { CLIENT_DEFAULT_HOST, Sockets } from '.';
-import { IMAGE_DEFAULT_DIR } from '../db/models';
 import { Collection, ObjectId } from 'mongodb';
+import multer from 'multer';
+import { DB } from '../db';
+import GBRoutines from "./routines";
+import { CLIENT_DEFAULT_HOST, IMAGE_DEFAULT_DIR, Sockets } from '.';
+import jwt from 'jsonwebtoken';
+import { SECRET } from '../interfaces';
+// export const device = require('express-device')
+// import fpath from 'path'
+
+export const gbr = GBRoutines;
 
 export function getMinMax(arr: Array<any>) {
   return arr.reduce(({ min, max }, v) => ({
@@ -53,9 +52,13 @@ export const jsonStatusError = {
 
 // We are assuming that the JWT will come in the header Authorization but it could come in the req.body or in a query param, you have to decide what works best for you.
 export const getTokenFromHeader = (req: any) => {
-  if (req.headers.authorization && req.headers.authorization.split(' ')[0] === 'Bearer') {
-    return req.headers.authorization.split(' ')[1];
-  }
+
+  const authHeader = req.headers['authorization']
+
+  const token = authHeader && authHeader.split(' ')[0] === 'Bearer' && authHeader.split(' ')[1]
+  // console.log(`jwt token: ` + req.token)
+  return token
+
 }
 
 export const isAuth = (req: any, res: any, next: any) => {
@@ -78,18 +81,45 @@ export const isAuth = (req: any, res: any, next: any) => {
 }
 
 
-export const isJwtAuth = (req: any, res: any, next: NextFunction) => {
+// When you generate a new JWT token, as the request is going to continue to next middleware step, 
+// probably you will need to set the user, same as you do 
+// when the jwt is correct. Something like this, try it, and let me know if it helps:
+export const isJwtAuth = async (req: Request, res: Response, next: NextFunction) => {
+
+  try {
+
+    // if user is authenticated in the session, carry on
+    const token = getTokenFromHeader(req)
+    if (!token) return res.status(401).json(jsonStatusError)
+
+    const user = await jwt.verify(token, SECRET as string)
+
+
+    // console.log(`isJwtAuth user: `, user)
+    // console.log(`req.signedCookies ${req.sessionID}`/* , req.signedCookies */)
+    req.user = user
+    return next()
+
+  } catch (e: any) {
+    console.log(`isJwtAuth ->` + e)
+    return res.status(403).json(jsonStatusError)
+  }
+}
+
+export const isJwtAuthWithPassport = (req: Request, res: Response, next: NextFunction) => {
 
   return passport.authenticate('jwt', { session: false }, (err: any, jwtPayload: any) => {
 
     if (err || !jwtPayload)
-      return res.status(401).json(jsonStatusError);
-
+      return res.status(401).json(jsonStatusError)
     // if user is authenticated in the session, carry on
+    // search for Redis Store session
     const token = getTokenFromHeader(req)
-    console.error(`JWT TOKEN FROM HEADER auth: `)
+    if (!token) return res.status(401).json(jsonStatusError)
 
     console.error(`req.signedCookies ${req.sessionID}`/* , req.signedCookies */)
+
+
     // console.error(`req.cookies`, req.cookies)
 
     // if user is authenticated in the session, carry on
@@ -97,8 +127,17 @@ export const isJwtAuth = (req: any, res: any, next: NextFunction) => {
   })(req, res, next)
 }
 
-export const isBearerAuthenticated = passport.authenticate('jwt-bearer', { session: false });
+// export const isBearerAuthenticated = passport.authenticate('jwt-bearer', { session: false });
 
+export function fileImgError(files: FileArray | undefined | null) {
+
+  let err: boolean = (files !== null && !files) || (files !== null && Object.keys(files).length === 0)
+  console.log(files, err)
+  return err
+}
+
+// Use the mv() method to place the file somewhere on your server
+export const storagePath = (avatarFile: UploadedFile | null, path: string): string => (!avatarFile ? '' : (path + avatarFile.name))
 
 export const storage = multer.diskStorage({
   destination: (req, file, cb) => {

@@ -8,24 +8,6 @@ import { MongoClient, MongoClientOptions, Collection, Db, MongoError } from 'mon
 import { mongoUri, mongoCFG, dbName, memobj, dbobj, memjs } from './serverconfig/netselector';
 
 
-/* 
-import {
-  Device, DeviceModel, Category, Cate_prod,
-  CategoryModel, Cate_prodModel, Product, ProductModel
-} from './models' */
-
-// import assert = require('assert');
-
-
-
-/* declare interface IModels {
-
-  Category: CategoryModel;
-  Cate_prod: Cate_prodModel;
-  Product: ProductModel;
-  Device: DeviceModel;
-} */
-
 class DB {
 
 
@@ -36,20 +18,9 @@ class DB {
   private readonly dbName = dbName;
 
   private static CountConnections: number = 0;
-  //   private _models: IModels;
-
-  private constructor() {
 
 
-
-    /*  this._models = {
-         Category: new Category('category').model,
-         Cate_prod: new Cate_prod('cate_prod').model,
-         Product: new Product('product').model,
-         Device: new Device('device').model
-         // this is where we initialise all models
-     } */
-  }
+  private constructor() { }
 
   // Open the MongoDB connection.
   public static async connect(Uri?: string, CFG?: MongoClientOptions) {
@@ -117,10 +88,11 @@ class DB {
  *  
  **/
 
-import { RedisClientOptions } from './serverconfig/serverOptions';
+import { RedisClientOptions } from './serverconfig/redisOptions';
 import { createClient, RedisClient, ClientOpts } from 'redis';
 import makeLibraryDb from './library-db';
 import makeBookDb from './book-db';
+import makeCategoryDb from './category-db';
 
 interface MemCacheConnectStatus {
 
@@ -146,7 +118,7 @@ class MemCache {
       console.log('Redis connected!'/* , memobj._subscription */)
     })
 
-    this.client.on('error', (error) => {
+    this.client.on('error', (error: any) => {
       console.log((new Date()) + 'Redis: disconnected!', error)
 
       // case reconnect after set
@@ -190,19 +162,29 @@ async function dbDisconnect(client: { quit: () => any; }) {
 }
 
 
-// makeDb()
+// makeDb
 // Check DB Connection
-export async function makeDb() {
+export async function makeDb(): Promise<Db | undefined> {
 
   // trying to reconnect
   if (DB === undefined || !DB.isConnected())
     await DB.connect(mongoUri, mongoCFG)
+  //  { code: 503, status: 'DBConnectionError', error: error }
+
 
   return DB.getDB(dbName)
 }
 
 const LibraryDB = makeLibraryDb({ makeDb })
 const BookDB = makeBookDb({ makeDb })
+const categoryDB = makeCategoryDb({ makeDb })
 
 
-export { DB, MemCache, memjs, mongoCFG, LibraryDB, BookDB }
+export {
+  DB, MemCache, memjs, mongoCFG,
+
+
+  LibraryDB,
+  BookDB,
+  categoryDB,
+}

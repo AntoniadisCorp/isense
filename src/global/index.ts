@@ -1,7 +1,5 @@
-export * from './routines'
 export * from './emailer'
 export * from './socket.io'
 export * from './TcpSocketServer'
-export * from './datamodel'
 export * from './vars'
 export * from './gfunctions'

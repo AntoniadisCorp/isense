@@ -1,68 +1,10 @@
-import { ObjectId, Collection, InsertOneResult, UpdateResult, ModifyResult } from 'mongodb';
-import { ImageDef, storagePath, AVATAR_DEFAULT_DIR, AVATAR_DEFAULT_LINK, fileImgError, ExpressMulterFile, IMAGE_DEFAULT_DIR } from './image';
+import { ObjectId, Collection, InsertOneResult, UpdateResult } from 'mongodb';
 import { UploadedFile, FileArray } from 'express-fileupload';
-import { OptionEntry, shiftRsortNo, shiftRByKey, STORAGE_DEFAULT_DIR, shiftLsortNo } from '../../global';
+import { shiftRsortNo, shiftRByKey, STORAGE_DEFAULT_DIR, shiftLsortNo, fileImgError, storagePath, AVATAR_DEFAULT_DIR, AVATAR_DEFAULT_LINK } from '../../global';
 import { DB } from '../net';
-
+import { Book, OptionEntry, ExpressMulterFile, BookCase } from '../../interfaces';
 import chalk from 'chalk'
 
-interface Dimension {
-
-    x: number
-    y: number
-}
-
-export interface BookCase {
-    _id?: string;
-    skuid: string;
-    name: string;
-    type: number;
-    whatnot: string;
-    bookshelf: string;
-    categories?: Array<{ _id: string | ObjectId, name: string }>
-    books?: {
-        count: number,
-        arrIndex: Array<{ _id: string | ObjectId, bookshelfNo: number }>
-    }
-    desc: string,
-    date_added?: Date;
-    date_modified?: Date;
-    imageUrl?: string;
-    disabled: boolean;
-    recyclebin?: boolean;
-}
-
-interface BCase {
-    _id: ObjectId | string,
-    whatnot: string,
-    bookshelf: string,
-    bookshelfNo?: number
-}
-
-export interface Book {
-
-    _id?: ObjectId | string
-    SKU: number
-    name: string
-    libraryId: ObjectId | string
-    categoryId?: ObjectId | string
-    bookcase: BCase
-    author?: string
-    publisher?: string
-    year?: number
-    pages?: number
-    volume?: number
-    version?: number
-    dimensions: Dimension
-    isbn10: string
-    isbn13: string
-    status: string
-    notes: string
-    avatar: ImageDef
-    date_added: Date
-    date_modified: Date | null
-    recyclebin: boolean
-}
 
 export function setBook(reqBody: any, avatarFile: UploadedFile | null): Book {
 

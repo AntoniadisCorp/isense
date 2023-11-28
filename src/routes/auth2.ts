@@ -1,11 +1,10 @@
 import { Request, Response, Handler, NextFunction, RequestHandler } from "express";
 import { DB, MemCache } from "../db";
-import { Client, Code, Token, SECRET } from "../db/models";
-import { randtoken } from "../global";
 import { Collection } from "mongodb";
 import { ObjectId } from "bson";
 import * as jwt from 'jsonwebtoken'
-
+import { Client, SECRET } from "../interfaces";
+import randtoken from 'rand-token';
 // Load required packages
 const oauth2orize = require('oauth2orize'),
     login = require('connect-ensure-login')

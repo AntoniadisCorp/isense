@@ -1,7 +1,7 @@
 import { RedisStoreOptions } from "connect-redis"
 
 
-export const NodeSetSessionOptions = (secret: string, genid: string, store: RedisStoreOptions): object => {
+const NodeSetSessionOptions = (secret: string, genid: string, store: RedisStoreOptions): object => {
 
     return Object.freeze({
         secret,
@@ -11,7 +11,7 @@ export const NodeSetSessionOptions = (secret: string, genid: string, store: Redi
         saveUninitialized: true,
         resave: false,
         // using store session on Redis using express-session + connect
-        store: store,
+        store,
         cookie: { secure: true, httponly: true, maxAge: 3600000 }, // Note that the cookie-parser module is no longer needed
         cookieName: '__UDRD',
         duration: 30 * 60 * 1000,
@@ -20,7 +20,7 @@ export const NodeSetSessionOptions = (secret: string, genid: string, store: Redi
     })
 }
 
-export const RedisClientOptions = (host: string, port: number, password?: string): object => {
+const RedisClientOptions = (host: string, port: number, password?: string): object => {
     return Object.freeze({
         port,               // replace with your port
         host,        // replace with your hostanme or IP address
@@ -34,3 +34,5 @@ export const RedisClientOptions = (host: string, port: number, password?: string
         // }
     })
 }
+
+export { NodeSetSessionOptions, RedisClientOptions }

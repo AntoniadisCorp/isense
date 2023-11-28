@@ -5,7 +5,7 @@ import fpath from 'path'
 
 
 // GLOBAL FUNCTIONS
-import { Sockets, GBRoutines, gbr, sockAttach } from './global'
+import { Sockets, gbr, sockAttach } from './global'
 
 // APP ROUTES
 import { mainRouter, Tasks, Auth } from './routes'
@@ -21,7 +21,7 @@ import passport from 'passport'
 import session from 'express-session'
 let connect_redis = require('connect-redis')
 
-import { NodeSetSessionOptions } from './db/serverconfig/serverOptions'
+import { NodeSetSessionOptions } from './db/serverconfig/redisOptions'
 
 import { MemCache, memjs } from './db'
 import fileUpload from 'express-fileupload'
@@ -35,7 +35,13 @@ const RedisStore = connect_redis(session)
 //   helmet  = require('helmet')
 
 
+const getDurationInMilliseconds = (start: any) => {
+    const NS_PER_SEC = 1e9
+    const NS_TO_MS = 1e6
+    const diff = process.hrtime(start)
 
+    return (diff[0] * NS_PER_SEC + diff[1]) / NS_TO_MS
+}
 
 
 // , flash    = require('connect-flash')
@@ -110,7 +116,7 @@ class Server {
 
         // Express File uploading
         this.app.use(fileUpload());
-        // View Engine        
+        // View Engine
         this.app.use(express.static(fpath.join(__dirname, 'public')))
         this.app.use(favicon(fpath.join(__dirname, 'public', 'favicon.ico')))
 
@@ -141,8 +147,8 @@ class Server {
         // cookieParser
         // this.app.use(cookieParser('secretSign#143_!223'))
         // Body Parser MW
-        this.app.use(express.urlencoded({ limit: '2mb', extended: false }));
-        this.app.use(express.json({ limit: '2mb' })) // To parse the incoming requests with JSON payloads
+        this.app.use(express.urlencoded({ limit: '3mb', extended: false }));
+        this.app.use(express.json({ limit: '3mb' })) // To parse the incoming requests with JSON payloads
 
 
 
@@ -177,17 +183,51 @@ class Server {
                 res.sendStatus(200)
             } else {
 
+                const start = process.hrtime()
+
                 let sQWid: any = req.session;
 
                 sQWid!.views = sQWid!.views ? sQWid!.views + 1 : 1
                 // req.session!.passport = ?
 
-                // if (req.cookies) console.error('Cookies: ', req.cookies)
+                if (req.cookies) console.error('Cookies: ', req.cookies)
 
                 var expireTime = sQWid.cookie.maxAge / 1000;
-                console.warn(`${req.ip} ${req.method} ${req.url} by sessionID ${req.sessionID} expireTime: ${expireTime}`/* , req.session */)
+                console.warn(`${req.ip} ${req.method} ${req.url} by sessionID ${req.sessionID} expireTime: ${expireTime}`/* , req.session */, req.session)
+
+                /*  let requestSize = 0;
+                 req.on('data', (chunk) => {
+                     requestSize += Buffer.from(chunk).length;
+                 }); */
+
+                res.on('finish', () => {
+                    const durationInMilliseconds = getDurationInMilliseconds(start)
+                    console.log(`${req.method} ${req.originalUrl} [FINISHED] ${durationInMilliseconds.toLocaleString()} ms `)
+
+                })
+
+                res.on('close', () => {
+                    const durationInMilliseconds = getDurationInMilliseconds(start)
+                    console.log(`${req.method} ${req.originalUrl} [CLOSED] ${durationInMilliseconds.toLocaleString()} ms `)
+
+                })
+
+
                 next()
             }
+            /* this.app.use(
+                async function (req: Request, res: Response, next: NextFunction) {
+                    const {c: req.bodySize as any } = await new Promise(function (resolve) {
+                        let requestSize = 0;
+                        req.on('data', (chunk) => {
+                            requestSize += Buffer.from(chunk).length;
+                        });
+                        req.on('end', () => {
+                            return resolve(requestSize)
+                        });
+                    });
+                    next();
+                }) */
 
         })
 

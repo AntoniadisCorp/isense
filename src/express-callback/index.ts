@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express'
-import { OptionEntry } from '../global'
+import { OptionEntry } from '../interfaces'
 
 // set Headers and methods
 
@@ -22,7 +22,7 @@ export const makeExpressCallback = (controller: any) => {
                 'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
                 'Access-Control-Allow-Credentials': 'true',
                 'Content-Type': req.get('Content-Type'),
-                Referer: req.get('referer'),
+                'Referer': req.get('referer'),
                 'User-Agent': req.get('User-Agent'),
             }
         }
@@ -41,7 +41,7 @@ export const makeExpressCallback = (controller: any) => {
                 // res.statusMessage = httpResponse.status
                 res.status(httpResponse.code).send(httpResponse)
             })
-            .catch((e: any) => res.status(500).send({ error: 'An unkown error occurred. on controller' }))
+            .catch((e: Error) => res.status(500).send({ error: 'An unkown error occurred. on controller.' + e.message }))
     }
 }
 

@@ -1,19 +1,20 @@
 import { Request, Response, NextFunction, Router } from 'express'
 import express from 'express'
 // Configuring Passport
-import passport from 'passport'
+import passport, { PassportStatic } from 'passport'
 import passpjwt from 'passport-jwt';
 import { Timestamp } from 'bson'
-
+import randtoken from 'rand-token';
 import jwt from 'jsonwebtoken'
 // const login = require('connect-ensure-login')
 
 // import session from 'express-session'
-import { utype, GBRoutines, User, getTokenFromHeader, isAuth, randtoken, debug } from '../global'
+import { getTokenFromHeader, isAuth, jsonStatusError } from '../global'
 import { Collection, Long, ObjectId } from 'mongodb';
 import { DB, MemCache } from '../db';
+import { Client, SECRET, Token } from '../interfaces';
+import GBRoutines, { debug } from '../global/routines'
 // import { Auth2 } from './auth2';
-import { Token, SECRET, Client } from '../db/models';
 
 const BearerStrategy = require('passport-http-bearer'),
     // mongo = require('mongojs'),
@@ -34,7 +35,7 @@ const BearerStrategy = require('passport-http-bearer'),
 
     LocalStrategy = require('passport-local').Strategy,
 
-    gbr = new GBRoutines()
+    gbr = GBRoutines
 // let UserCache: any[] = []
 
 class Auth {
@@ -44,7 +45,7 @@ class Auth {
     // private newUser: User
 
 
-    constructor(passport: any) {
+    constructor(passport: PassportStatic) {
 
         this.router = express.Router()
 
@@ -56,6 +57,7 @@ class Auth {
         this.httpRoutesGets()
         this.httpRoutesPosts()
         this.httpRoutesPut()
+        this.httpRoutesPatch()
         this.httpRoutesDelete()
     }
 
@@ -107,6 +109,15 @@ class Auth {
     httpRoutesPut(): void { }
 
     /**
+     * https Router Patch
+     */
+
+    httpRoutesPatch(): void {
+
+        // this.router.get('/v2/authorize', Auth2.instance.authorization())
+    }
+
+    /**
      * https Router Delete
      */
 
@@ -153,19 +164,31 @@ class Auth {
         passport.use(new JwtStrategy(passportOpts, async (jwtPayload, done) => {
 
             try {
-                // console.log('payload received', jwtPayload);
+
+
+                // find the user in db if needed. 
+                // This functionality may be omitted if you store everything you'll need in JWT payload.
+                console.log('payload received', jwtPayload);
                 const expirationDate = new Date(jwtPayload.exp * 1000);
+
+
                 if (expirationDate < new Date()) {
                     return done(null, false);
                 }
-                // usually this would be a database call:
-                //   var user = users[_.findIndex(users, {id: jwt_payload.id})];
-                //Pass the user details to the next middleware
-                return done(null, jwtPayload);
 
-                /* else {
-                    next(null, false);
-                  } */
+                if (!DB.isConnected()) { // trying to reconnect
+                    await DB.connect();
+                }
+
+
+                // usually this would be a database call:
+                const user = DB.getCollection('user').findOne({ _id: jwtPayload._id })
+                // or look for redis
+
+
+                //Pass the user details to the next middleware 
+                return done(null, user)
+
             } catch (error) {
                 return done(error);
             }
@@ -255,7 +278,7 @@ class Auth {
                                 delete newUser._session['libraryId']; // Removes newUser._session.libraryId from the dictionary.
                             }
 
-                            Redisclient.hmset(`user`, `${user._id}`, JSON.stringify(newUser), (err, redisUser) => {
+                            Redisclient.hmset(`user`, `${user._id}`, JSON.stringify(newUser), (err: any, redisUser: any) => {
                                 if (err) { ; console.error(err); }
                                 console.log('store user key to redis', redisUser)
                             })
@@ -282,6 +305,7 @@ class Auth {
                         return res.json({ userId: newUser._id, jwt: token, refreshToken: refreshToken });
                     })
                 } catch (error) {
+
                     return next(error);
                 }
             })(req, res, next)
@@ -289,39 +313,62 @@ class Auth {
 
     async logout(req: Request, res: Response, next: NextFunction) {
 
-        const refreshToken: string = req.body.refreshToken;
-        console.info(`logout now, refreshToken: ${refreshToken}`)
+        try {
 
-        if (refreshToken) {
+            const refreshToken: string = req.body.refreshToken;
+            const { user, cookie }: any = req.session
+
+            console.info(`logout now, refreshToken: ${refreshToken}`)
+
+            if (!refreshToken) res.status(400).json(jsonStatusError)
+
             // store user key to redis
             const refTokenKey: string = refreshToken.substring(0, 31)
+
+            // create a Connection to redis. (no pooling req or clustering redis nodes)
             const Redisclient = new MemCache().connect(15000).cb
 
-            // set RefreshToken
-            Redisclient.del(refTokenKey, (num: any) => {
-                if (num > 0) { console.log(`refreshToken '${refTokenKey}' removed from Redis`) }
+            // del RefreshToken from Redis
+
+
+            Redisclient.del(refTokenKey, (err: any, num: number) => {
+                if (num < 1) {
+                    console.log(`refreshToken '${refTokenKey}' not found in Redis`)
+                    return res.sendStatus(404)
+                }
+                console.log(`refreshToken ${num} '${refTokenKey}' deleted from Redis`, cookie)
             })
+
             // Redis Connection Closed
             Redisclient.quit();
-        }
 
-        // if (req.session!.destroy) {
-        req.session!.destroy(function (err) {
-            if (err) {
-                console.log(err);
-            } else {
+            req.session.destroy((err) => {
+                if (err) {
+                    console.log(`Error Performing logout ${err}`);
+                    return res.sendStatus(400)
+                } else if (user) {
+                    console.log(`logout user ${user}.`)
+
+                } else {
+                    console.log(`logout called by a user without a session.`)
+                }
                 console.log('Redis Session Destroyed');
-            }
-        });
-        // }
-        req.logOut({}, err => {
-            if (err) {
-                console.log(err);
-            } else {
+            });
+
+            req.logOut({}, err => {
+                if (err) {
+                    console.log(err);
+                    return res.sendStatus(400)
+                }
                 console.log('User Session Logged out');
-            }
-        })
-        res.sendStatus(204);
+            })
+
+            return res.sendStatus(204);
+
+        } catch (error: any) {
+
+            return res.sendStatus(400)
+        }
     }
 
     async RefreshTokenfun(req: Request, res: Response, next: NextFunction) {
@@ -415,9 +462,9 @@ class Auth {
                         /* dbCollection
                             .save(client)
                             .then((client: any) => {
-
+ 
                                 if (!client) return next(false);
-
+ 
                                 return next()
                             })
                             .catch((err: any) => { if (err) { return next(err); } }) */
@@ -554,7 +601,7 @@ class Auth {
     }
 
     /* authSetting(): void {
-
+ 
         const authOption = {
             successRedirect: '/',
             failureRedirect: '/login',
@@ -562,25 +609,25 @@ class Auth {
         const successCallback = (req: Request, res: Response) => {
             res.redirect('/')
         }
-
+ 
         this.router.get('/auth/facebook',
             passport.authenticate('facebook'))
-
+ 
         this.router.get('/auth/facebook/callback',
             passport.authenticate('facebook', authOption), successCallback)
-
+ 
         this.router.get('/auth/twitter',
             passport.authenticate('twitter'))
-
+ 
         this.router.get('/auth/twitter/callback',
             passport.authenticate('twitter', authOption))
-
+ 
         this.router.get('/auth/google',
             passport.authenticate('google', {
                 scope:
                     ['https://www.googleapis.com/auth/userinfo.profile']
             }))
-
+ 
         this.router.get('/auth/google/callback',
             passport.authenticate('google', authOption), successCallback)
     } */

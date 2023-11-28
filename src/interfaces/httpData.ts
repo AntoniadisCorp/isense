@@ -1,0 +1,23 @@
+export interface OptionEntry {
+
+    headers?: {
+        'Content-Type': string | undefined
+        'Last-Modified'?: string | undefined
+        'Referer'?: string | undefined
+        'User-Agent'?: string | undefined
+    },
+    code: number
+    status: string
+    data?: entryData | any
+    error?: any
+}
+
+export interface entryData {
+
+    result?: Array<any>
+    message?: string
+    error?: undefined
+    current?: number
+    pages?: number
+    count?: number
+}

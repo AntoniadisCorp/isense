@@ -3,12 +3,15 @@ import { ObjectId } from 'bson';
 import * as express from 'express';
 import { NextFunction, Request, Response, Router } from 'express';
 import { Collection, } from 'mongodb';
-import { getBook, getLibrary } from '../controllers';
-import { addHierarchyCategory, getBookFromDb, ICategory, reconstructDescendants, saveBookInDb, updateAncestryCategory, updateBookinDB } from '../db/models';
+import { getBook, getLibrary, getPaginationBook, getBookBySKU, postCategory } from '../controllers';
+import { getBookFromDb, saveBookInDb, updateBookinDB } from '../db/models';
 // import { mainRouter } from './'
 import { DB, MemCache } from '../db/net';
 import { makeExpressCallback } from '../express-callback';
-import { debug, gbr, getMinMax, isJwtAuth, missNoArray, OptionEntry, dateFormatSystem } from '../global';
+import { gbr, getMinMax, isJwtAuth, missNoArray, dateFormatSystem, isJwtAuthWithPassport } from '../global';
+import { ICategory, OptionEntry } from '../interfaces';
+import { debug } from '../global/routines';
+import { addHierarchyCategory, reconstructDescendants, updateAncestryCategory } from '../entities/category';
 
 
 // var arrayToTree = require('array-to-tree');
@@ -47,7 +50,13 @@ class Tasks {
 
     httpRoutesGets(): void {
 
-        this.router.get('/', (req: Request, res: Response) => {
+        const random = (req: Request, res: Response) => {
+            // const httpRequest =  adaptRequest(req)
+            res.status(200).json({ code: 200, status: 'success', data: { result: Math.floor(Math.random() * 100) } });
+        }
+
+
+        /* this.router.get('/', (req: Request, res: Response) => {
             let tasks = { tArr: ['Task page 0!'] }
             console.log(tasks.tArr)
             res.send(tasks)
@@ -76,26 +85,21 @@ class Tasks {
             })
 
         })
-
-        const random = (req: Request, res: Response) => {
-            // const httpRequest =  adaptRequest(req)
-            res.status(200).json({ code: 200, status: 'success', data: { result: Math.floor(Math.random() * 100) } });
-        }
+ */
 
         // We plugin our jwt strategy as a middleware so only verified users can access this route
-        this.router.get('/random', isJwtAuth, random)
+        this.router.get('/random', isJwtAuthWithPassport, random)
 
         // LIBRARY
         this.router.get('/library/search', isJwtAuth, makeExpressCallback(getLibrary)) // Search for Libraries
         this.router.get('/library/search/:id', isJwtAuth, makeExpressCallback(getBook)); // Get Single task
-        this.router.get('/library/book/search', isJwtAuth, this.SearchTasks) // Search for Libraries
-        this.router.get('/library/book/sku', isJwtAuth, this.getSKU)
+        this.router.get('/library/book/search', isJwtAuth, makeExpressCallback(getPaginationBook)) // Search for Libraries
+        this.router.get('/library/book/sku', isJwtAuth, makeExpressCallback(getBookBySKU))
         this.router.get('/library/space/search', isJwtAuth, this.SearchTasks) // Search for Libraries Space
 
         // CATEGORY
         this.router.get('/library/space/category/search', isJwtAuth, this.tbCategorySearch) // table search of category tab
         this.router.get('/library/categories/:id', isJwtAuth, this.getTasks)
-
         this.router.get('/categories', isJwtAuth, this.getTasks); // Get All Tasks
         this.router.get('/categories/search', isJwtAuth, this.SearchByfilter); // Search All Categories
         this.router.get('/categories/book', isJwtAuth, this.SearchTasks) // Search for Libraries
@@ -107,14 +111,8 @@ class Tasks {
 
 
 
-    // When you generate a new JWT token, as the request is going to continue to next middleware step, probably you will need to set the user, same as you do when the jwt is correct. Something like this, try it, and let me know if it helps:
 
-    /* if (user.refreshToken === req.signedCookies.refreshToken) {
-      req.session.jwt = user.generateToken();
-      const decoded = jwt.verify(req.session.jwt, config.get("jwtPrivateKey"));
-      req.user = decoded;
-      next();
-    } */
+
 
 
     /**
@@ -138,8 +136,7 @@ class Tasks {
         this.router.post('/library/book/update', isJwtAuth, /* upload.single('avatar'),  */this.updateBookWithProgress)
 
         // CATEGORY
-        this.router.post('/library/category/save', isJwtAuth, this.saveCategory); // Save task
-        this.router.post('/library/category/update', isJwtAuth, this.editCategory) // Update/Edit Categories
+        this.router.post('/library/category/save', isJwtAuth, makeExpressCallback(postCategory)); // Save Category *** DONE ***
         this.router.post('/library/category/del', isJwtAuth, this.deleteTasks); // Update/Delete Tasks
 
         // BOOKCASE
@@ -170,6 +167,12 @@ class Tasks {
 
         this.router.put('/:id', this.updateTask); // Update task
         // this.router.put('/resetpass/:id', auth, this.resetpassword); // update password of the device
+    }
+
+    httpRoutesPatch(): void {
+
+        // CATEGORY
+        // this.router.patch('/library/category/update', isJwtAuth, makeExpressCallback(patchCategory)) // Update/Edit Categories
     }
 
     /**
@@ -212,40 +215,6 @@ class Tasks {
                 }
             })
         })
-    }
-
-    async getSKU(req: Request, res: Response) {
-
-        // Check DB Connection
-        if (!DB.isConnected()) { // trying to reconnect
-            await DB.connect()
-                .catch((error: any) => {
-                    console.error(error)
-                    return res.status(503).json({ code: 503, status: 'DBConnectionError', error: error })
-                })
-        }
-
-        const dbCollection: Collection = DB.getCollection('book')
-
-        let k = await dbCollection.find({}, { projection: { SKU: 1 } }).min({ SKU: 0 }).max({ SKU: 1000 }).hint({ SKU: 1 }).limit(100).toArray()
-
-
-        if (k) {
-            let SKU: number[] = k.map(v => v.SKU)
-            let no = getMinMax(missNoArray(SKU))
-
-            console.log('SKU: ', SKU)
-
-            return res.status(200).json({
-                code: 200, status: 'success', data: {
-                    result: no.min ? no.min : getMinMax(SKU).max >= 0 ? getMinMax(SKU).max + 1 : 0 /* arrayToTree(categories, {
-                        parentProperty: 'parentId',
-                        customID: '_id'
-                    }) */
-                }
-            });
-        }
-
     }
 
     // if the user is authenticated redirect to home
@@ -965,44 +934,6 @@ class Tasks {
         } else { res.status(500).json({ code: 500, status: "failed" }); }
     }
 
-    async saveCategory(req: Request, res: Response, next: NextFunction) {
-
-        try {
-            // find for firstname and lastname and mobile
-            const jsonObj = req.body.data
-
-            // Check DB Connection
-            if (!DB.isConnected()) { // trying to reconnect
-                await DB.connect();
-            } else {
-
-                let newobj: any = {},
-
-                    dbCollection: Collection = DB.getCollection('category');
-
-                newobj = jsonObj as ICategory
-                newobj.tree = []
-                newobj.date_added = new Date(jsonObj.date_added)
-                if (newobj.parentId) newobj.parentId = new ObjectId(jsonObj.parentId)
-
-                dbCollection.insertOne(newobj, (err: any, newId: any) => {
-                    if (err) { res.status(505).json({ code: 505, status: 'DbError', error: err }); }
-
-                    if (jsonObj.parentId)
-                        addHierarchyCategory(new ObjectId(newId.insertedId), newobj.parentId)
-
-                    res.status(200).json({ code: 200, status: 'success' });
-                });
-            }
-
-        } catch (error) {
-            console.log(error)
-            res.status(500).json({ code: 500, status: 'tryCatchError', error: error })
-        } finally {
-            // await DB.disconnect();
-        }
-
-    }
 
     async editCategory(req: Request, res: Response) {
         try {

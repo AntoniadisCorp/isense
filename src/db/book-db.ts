@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { FindCursor } from 'mongodb';
+import { Collection, Db, FindCursor, ObjectId } from 'mongodb';
 import { gbr } from '../global';
 import id from '../Id'
 
@@ -7,6 +7,8 @@ export default function makeBookDb({ makeDb }: any) {
   return Object.freeze({
     // findAll,
     findById,
+    findByPagination,
+    findBySKU,
     /* findByHash,
     findByPostId,
     findReplies,
@@ -46,10 +48,9 @@ export default function makeBookDb({ makeDb }: any) {
 
   // getBookFromDb
   async function findById({ id: _id, col, exceptFields }: any) {
-    const db = await makeDb()
+    const db: Db = await makeDb()
 
-    console.log(chalk.whiteBright('get Book from DB "col": ', chalk.underline(String(col)) + '!'))
-
+    // console.log(chalk.whiteBright('get Book from DB "col": ', chalk.underline(String(col)) + '!'))
     const book = await db.collection(String(col)).findOne({ _id }, exceptFields)
 
     if (!book) {
@@ -57,8 +58,56 @@ export default function makeBookDb({ makeDb }: any) {
     }
 
     const { _id: id, ...info } = book
-
     return { id, ...info }
+  }
+
+  async function findByPagination({ query, sort, pageNumber, pageSize }: any) {
+    const db: Db = await makeDb()
+
+    console.log(chalk.whiteBright('search Book from DB "col": ', chalk.underline(String(query.col)) + '!'))
+
+    const books: any[] = await db.collection('book').find(query)
+      .sort(sort)
+      .skip((pageSize * pageNumber) - pageSize)
+      .limit(pageSize)
+      .toArray()
+
+    if (!books) {
+      return null
+    }
+
+    let myArray: any[] = books.map<any>(v => new ObjectId(v._id))
+
+    let k: any = await db.collection('bookcase').find({
+      'books.arrIndex._id': { $in: books.map<ObjectId>(v => new ObjectId(v._id)) },
+    }, {
+      projection: { 'books.arrIndex': 1 }
+    })
+
+    k.forEach((item: any) => {
+
+      let myarray2: any[] = item.books.arrIndex
+      myArray.forEach((element, i) => {
+        const index = myarray2.findIndex(v => element.equals(v._id))
+        if (index > -1) books[i].bookcase.bookshelfNo = myarray2[index].bookshelfNo
+      }) // console.log(item, item.books.arrIndex)
+    })
+    // count documents in book db
+    const count: number = await db.collection('book').countDocuments(query, {})
+
+    // const { _id: id, ...info } = book
+    return { count, books }
+  }
+
+
+  async function findBySKU({ SKU = {} }) {
+
+
+    const db = await makeDb()
+
+    const result = await db.getCollection('book').find(SKU, { projection: { SKU: 1 } }).min({ SKU: 0 }).max({ SKU: 1000 }).hint({ SKU: 1 })
+
+    return (await result.limit(100).toArray())
   }
   /* 
   async function findByPostId({ postId, omitReplies = true }) {

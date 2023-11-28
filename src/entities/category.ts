@@ -1,53 +1,91 @@
-import { Schema, model, Document, Model } from 'mongoose';
 import { ObjectId, Collection } from 'mongodb';
-import { DB } from '../net';
+import { DB } from '../db';
+import { ICategory } from '../interfaces';
 /* ///<reference path="../typings/modules/mongoose/index.d.ts" />
 ///<reference path="../typings/modules/mongodb/index.d.ts" /> */
 
-export declare interface ICategory extends Document {
-  _id: string;
-  name?: string;
-  slug?: string;
-  tree?: Array<{ _id: string, name: string, slug: string }>
-  desc?: number;
-  icon?: string;
-  parentId?: string;
-  children?: Array<ICategory>;
-  date_added?: Date;
-  date_modified?: Date;
-  disabled?: boolean;
-  root?: boolean;
-}
+export default function buildMakeCategory({ Id, md5, sanitize }: any) {
 
-export interface CategoryModel extends Model<ICategory> { };
+  return function makeCategory({
+    _id = Id.makeId(),
+    name,
+    slug,
+    icon,
+    desc,
+    date_added = Date.now(),
+    date_modified = Date.now(),
+    parentId,
+    root = true,
+    tree,
+    disabled = false,
+    recyclebin = false,
 
-export class Category {
+  }: any = {}) {
+    if (!ObjectId.isValid(_id)) {
+      throw new Error('Category must have a valid id.')
+    }
+    if (!name) {
+      throw new Error('Category must have an name.')
+    }
+    if (name.length < 2) {
+      throw new Error("Category name must be longer than 2 characters.")
+    }
+    if (!desc || desc.length < 1) {
+      throw new Error('category must include at least one character of text.')
+    }
+    if (parentId && !ObjectId.isValid(parentId)) {
+      throw new Error('If supplied. category must contain a valid parentId.')
+    }
 
-  private _model: Model<ICategory>;
+    let sanitizedDesc: string = sanitize(desc).trim(),
+      hash: any;
+    if (sanitizedDesc.length < 1) {
+      throw new Error('Category contains no usable description.')
+    }
+    if (parentId) root = false
 
 
-  constructor(dbCollectionName: string) {
-    const schema = new Schema({
-      _id: { type: Schema.Types.ObjectId, required: true },
-      name: { type: String, required: true },
-      desc: { type: Number, required: true },
-      icon: { type: String, required: true },
-      parent_id: { type: String, ref: 'Category' },
-      children: { type: Array, ref: 'Category' },
-      created: { type: Date, default: Date.now() },
-      modified: { type: Date },
-      status: { type: String, default: 'active' },
-      recyclebin: { type: Boolean, default: false },
-    });
 
-    this._model = model<ICategory>(dbCollectionName, schema, dbCollectionName);
+    return Object.freeze({
+      getId: () => _id,
+      getName: () => name,
+      getSlug: () => slug,
+      getCreatedOn: () => date_added,
+      getHash: () => hash || (hash = makeHash()),
+
+      getIcon: () => icon,
+      getModifiedOn: () => date_modified,
+      getParentId: () => parentId,
+      getTree: () => tree,
+      getDesc: () => sanitizedDesc,
+      isDeleted: () => !recyclebin, // if recyclebin is false the is not deleted if true is deleted
+      isEnabled: () => disabled,
+      isRoot: () => root,
+      markDeleted: () => {
+        recyclebin = true
+      },
+      disabled: () => {
+        disabled = true
+      },
+      enabled: () => {
+        disabled = false
+      }
+    })
+
+    function makeHash() {
+      return md5(
+        sanitizedDesc +
+        disabled +
+        root +
+        (name || '') +
+        (slug || '') +
+        (icon || '')
+      )
+    }
   }
 
-  public get model(): Model<ICategory> {
-    return this._model
-  }
-}
 
+}
 
 export async function addHierarchyCategory(_id: ObjectId, parentId: ObjectId): Promise<any> {
 
@@ -61,7 +99,7 @@ export async function addHierarchyCategory(_id: ObjectId, parentId: ObjectId): P
 
       let dbCollection: Collection = DB.getCollection('category')
 
-      let parent = await dbCollection.findOne({ '_id': parentId, projection: {'name': 1, 'slug': 1, 'tree': 1 }})
+      let parent = await dbCollection.findOne({ '_id': parentId, projection: { 'name': 1, 'slug': 1, 'tree': 1 } })
 
       // console.log('parent:: ->', parent)
 
@@ -103,8 +141,8 @@ export async function rebuildHierarchyCategory(_id: ObjectId, parentId: ObjectId
       let tree: { _id: ObjectId, name: string, slug: string }[] = []
 
       while (parentId) {
-        const category = await dbCollection.findOne({ '_id': parentId }, { projection: { 'parentId': 1, 'name': 1, 'slug': 1, 'tree._id': 1 } })    
-            if (!category) break
+        const category = await dbCollection.findOne({ '_id': parentId }, { projection: { 'parentId': 1, 'name': 1, 'slug': 1, 'tree._id': 1 } })
+        if (!category) break
 
         parentId = category.parentId as ObjectId
         tree.unshift({ _id: category._id, name: category.name, slug: category.slug })
@@ -118,7 +156,7 @@ export async function rebuildHierarchyCategory(_id: ObjectId, parentId: ObjectId
   }
 }
 
-export async function updateAncestryCategory(dbCollection: Collection, _id: ObjectId, set: any, ) {
+export async function updateAncestryCategory(dbCollection: Collection, _id: ObjectId, set: any,) {
   // First, you need to update the category name with the following operation
   const Rescat = await dbCollection.updateOne({ _id }, {
     $set: set
@@ -129,7 +167,7 @@ export async function updateAncestryCategory(dbCollection: Collection, _id: Obje
 
 export async function reconstructDescendants(dbCollection: Collection, _id: ObjectId): Promise<void> {
   // You can use the following loop to reconstruct all the descendants of the “name” category
-  const categories: any = dbCollection.find({ 'tree._id': _id , projection: {'parentId': 1  }} )
+  const categories: any = dbCollection.find({ 'tree._id': _id, projection: { 'parentId': 1 } })
 
   // console.log(`categories:`, categories)
   categories.forEach((category: { _id: ObjectId, parentId: ObjectId }) => {

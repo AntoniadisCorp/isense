@@ -1,3 +1,5 @@
+import { utype } from "../interfaces"
+
 let generatePassword = require("password-generator"),
     maxLength = 18,
     minLength = 6,
@@ -10,26 +12,6 @@ let generatePassword = require("password-generator"),
     NUMBER_RE = /([\d])/g,
     SPECIAL_CHAR_RE = /([\?\-])/g,
     NON_REPEATING_CHAR_RE = /([\w\d\?\-])\1{2,}/g
-
-export interface utype {
-
-    _id: number | undefined
-    Firstname?: string | undefined
-    Lastname?: string | undefined
-    email: string | undefined
-    mobile?: number | undefined
-    username: string | undefined
-    password: string
-    carmark?: string | undefined
-    carsecurity?: string | undefined
-    carmodelname?: string | undefined
-    carnumber?: string | undefined
-    day?: string | undefined
-    month?: string | undefined
-    year?: string | undefined
-    registeredOn?: number | undefined
-}
-
 
 export class User implements utype {
 
@@ -66,11 +48,13 @@ export class User implements utype {
         this.year = undefined */
         this.registeredOn = Date.now()
 
+        // Object.freeze(this)
+
     }
 
-    set(usertype: utype): object {
+    async set(usertype: utype): Promise<object> {
 
-        return {
+        return Object.freeze({
 
             _id: this._id = usertype._id,
             email: this.email = usertype.email ? usertype.email : undefined,
@@ -78,7 +62,8 @@ export class User implements utype {
             Lastname: this.Lastname = usertype.Lastname,
             mobile: this.mobile = usertype.mobile ? usertype.mobile : undefined,
             username: this.username = usertype.mobile ? usertype.mobile.toString() : usertype.email,
-            password: this.password = usertype.password ? usertype.password : this.customPassword(),
+            password: this.password = usertype.password && await this.isStrongEnough(usertype.password)
+                ? usertype.password : this.customPassword(),
             carmark: this.carmark = usertype.carmark,
             carsecurity: this.carsecurity = usertype.carsecurity,
             carnumber: this.carnumber = usertype.carnumber,
@@ -87,51 +72,32 @@ export class User implements utype {
             month: this.month = usertype.month,
             year: this.year = usertype.year,
             timeregister: this.registeredOn = usertype.registeredOn
-        }
+        })
     }
 
-    private isStrongEnough(password: string) {
+    private async isStrongEnough(password: string): Promise<boolean | null> {
 
-        var uc = password.match(UPPERCASE_RE)
-        var lc = password.match(LOWERCASE_RE)
-        var n = password.match(NUMBER_RE)
-        var sc = password.match(SPECIAL_CHAR_RE)
-        var nr = password.match(NON_REPEATING_CHAR_RE)
-        return password.length >= minLength &&
+        let uc = password.match(UPPERCASE_RE)
+        let lc = password.match(LOWERCASE_RE)
+        let n = password.match(NUMBER_RE)
+        let sc = password.match(SPECIAL_CHAR_RE)
+        let nr = password.match(NON_REPEATING_CHAR_RE)
+
+
+        return (password.length >= minLength &&
             !nr &&
             uc && uc.length >= uppercaseMinCount &&
             lc && lc.length >= lowercaseMinCount &&
             n && n.length >= numberMinCount &&
-            sc && sc.length >= specialMinCount
+            sc && sc.length >= specialMinCount)
     }
 
     private customPassword() {
-        var password = ''
-        var randomLength = Math.floor(Math.random() * (maxLength - minLength)) + minLength
+        let password = ''
+        let randomLength = Math.floor(Math.random() * (maxLength - minLength)) + minLength
         while (!this.isStrongEnough(password)) {
             password = generatePassword(randomLength, false, /[\w\d\?\-]/)
         }
         return password
     }
-}
-
-export interface OptionEntry {
-
-    headers?: {
-        'Content-Type': string | undefined
-        'Last-Modified'?: string | undefined
-        'Referer': string | undefined
-        'User-Agent': string | undefined
-    },
-    code: number
-    status: string
-    data?: entryData | any
-    error?: any
-}
-
-export interface entryData {
-
-    result?: Array<any>
-    message?: string
-    error?: undefined
 }

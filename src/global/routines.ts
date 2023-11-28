@@ -1,14 +1,12 @@
 import { Response } from 'express'
 import * as useragent from 'express-useragent'
-import { utype } from './datamodel'
 import { isString, isArray } from 'util';
-import { Category, ICategory } from '../db/models';
-import { Mongoose } from 'mongoose';
 import { v1 as uuidv1, v4 as uuidv4, v5 as uuidv5, v5 as uuidv5_, } from 'uuid';
-export const debug = { explain: false }
-
 import { compareSync, genSaltSync, hashSync } from 'bcrypt'
+import { utype } from '../interfaces';
 
+
+const debug = { explain: false }
 class GBRoutines {
 
     // private version: string
@@ -206,4 +204,5 @@ class GBRoutines {
     };
 }
 
-export { GBRoutines }
+export default new GBRoutines()
+export { debug }

@@ -6,7 +6,7 @@ Save the following server in example.js:
 */
 // var sys = require('sys')
 let net = require('net')
-import { GBRoutines } from '.'
+import GBRoutines from './routines'
 // import * as gps from 'gps-tracking'
 // let gps = require('gps-tracking');
 
@@ -22,20 +22,20 @@ class TcpSocketServer {
     private server: any
     private gpsOptions: any
 
-    constructor (svraddr?: string, svrport?: number) {
+    constructor(svraddr?: string, svrport?: number) {
 
-        let gbr: GBRoutines = new GBRoutines()
+        let gbr: any = GBRoutines
 
-        this.svraddr = gbr.Variablevalid(svraddr) == null? '0.0.0.0' : svraddr
-        this.svrport = gbr.Variablevalid(svrport) == null? 8000 : svrport
+        this.svraddr = gbr.Variablevalid(svraddr) == null ? '0.0.0.0' : svraddr
+        this.svrport = gbr.Variablevalid(svrport) == null ? 8000 : svrport
         this.sockets = [];
-        
+
 
         this.gpsOptions = {
-            'debug'                 : false, //We don't want to debug info automatically. We are going to log everything manually so you can check what happens everywhere
+            'debug': false, //We don't want to debug info automatically. We are going to log everything manually so you can check what happens everywhere
             //'host'                  : 'isense.westeurope.cloudapp.azure.com',// '40.115.55.149',
-            'port'                  : 8081,
-            'device_adapter'        : "TK103"
+            'port': 8081,
+            'device_adapter': "TK103"
         };
     }
 
@@ -90,18 +90,18 @@ class TcpSocketServer {
         let client = new net.Socket(),
             HOST = this.gpsOptions.host, PORT = this.gpsOptions.port;
 
-        client.connect(PORT, HOST, function() {
+        client.connect(PORT, HOST, function () {
             console.log('Client connected to: ' + HOST + ':' + PORT);
             // Write a message to the socket as soon as the client is connected, the server will receive it as message from the client 
             client.write('(009205906401BP05000009205906401190629A2321.5726N08518.8931E000.01027100.000001000000L076864EE)');
-         
+
         });
-         
-        client.on('data', function(data:any) {    
+
+        client.on('data', function (data: any) {
             console.log('Client received: ' + data);
             let ival = 10000
             setInterval(() => {
-                
+
                 console.log(`Client writing interval: ${ival}` + data);
                 client.write('(009205906401BR00190629A2321.5729N08518.8934E000.01033420.000001000007L076864EE)');
             }, ival)
@@ -109,13 +109,13 @@ class TcpSocketServer {
                 client.destroy();
             }
         });
-         
+
         // Add a 'close' event handler for the client socket
-        client.on('close', function() {
+        client.on('close', function () {
             console.log('Client closed');
         });
-         
-        client.on('error', function(err:any) {
+
+        client.on('error', function (err: any) {
             console.error(err);
         });
     }
@@ -131,12 +131,12 @@ class TcpSocketServer {
         });
 
         // incoming data, i.e. update a map 
-        this.server.on('track', (gps:any) => {
+        this.server.on('track', (gps: any) => {
             //updateMap (gps.geo.latitude, gps.geo.longitude);
             // console.log('GPS: ', `${gps.geo.latitude} ${gps.geo.longitude}`);
         });
 
-        this.server.on('data', (raw:any) => {
+        this.server.on('data', (raw: any) => {
             console.log('Incoming data: ' + raw);
         });
 
@@ -145,26 +145,26 @@ class TcpSocketServer {
             console.log('listening from ', listen);
         });
 
-        this.server.on('connection', (socket:any) => {
+        this.server.on('connection', (socket: any) => {
             console.log('Connection from ' + socket.remoteAddress);
         });
 
-        this.server.on('disconnect', (socket:any) => {
+        this.server.on('disconnect', (socket: any) => {
             console.log('Disconnected device ' + socket.remoteAddress);
         });
 
-        this.server.on('timeout', (socket:any) => {
+        this.server.on('timeout', (socket: any) => {
             console.log('Time out from ' + socket.remoteAddress);
         });
-        this.server.on('fail', (err:any) => {
+        this.server.on('fail', (err: any) => {
             console.log(err);
         });
 
-        this.server.on('error', (err:any) => {
+        this.server.on('error', (err: any) => {
             console.log(err);
         });
 
-        this.server.on('log', (name:any, value:any) => {
+        this.server.on('log', (name: any, value: any) => {
             console.log('Event: ' + name);
             console.log(value);
         });
