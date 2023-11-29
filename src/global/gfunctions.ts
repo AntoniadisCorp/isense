@@ -9,6 +9,7 @@ import GBRoutines from "./routines";
 import { CLIENT_DEFAULT_HOST, IMAGE_DEFAULT_DIR, Sockets } from '.';
 import jwt from 'jsonwebtoken';
 import { SECRET } from '../interfaces';
+import { log } from '../logger/log';
 // export const device = require('express-device')
 // import fpath from 'path'
 
@@ -56,7 +57,7 @@ export const getTokenFromHeader = (req: any) => {
   const authHeader = req.headers['authorization']
 
   const token = authHeader && authHeader.split(' ')[0] === 'Bearer' && authHeader.split(' ')[1]
-  // console.log(`jwt token: ` + req.token)
+  // log(`jwt token: ` + req.token)
   return token
 
 }
@@ -64,13 +65,13 @@ export const getTokenFromHeader = (req: any) => {
 export const isAuth = (req: any, res: any, next: any) => {
 
 
-  console.log('User Session req auth ', req && req.user ? req.user : 'req.user node defined');
+  log('User Session req auth ', req && req.user ? req.user : 'req.user node defined');
 
-  console.log(`auth session passport ${req.isAuthenticated()}`, req.session.passport);
+  log(`auth session passport ${req.isAuthenticated()}`, req.session.passport);
 
   // Cookies that have not been signed
-  console.error(`req.signedCookies ${req.sessionID}`/* , req.signedCookies */)
-  // console.error(`req.cookies`, req.cookies)
+  log(`req.signedCookies ${req.sessionID}`/* , req.signedCookies */)
+  // log('req.cookies`, req.cookies)
 
 
   // let isAuthenticated = () => req.session.passport && req.session.passport.user? true : false
@@ -95,13 +96,13 @@ export const isJwtAuth = async (req: Request, res: Response, next: NextFunction)
     const user = await jwt.verify(token, SECRET as string)
 
 
-    // console.log(`isJwtAuth user: `, user)
-    // console.log(`req.signedCookies ${req.sessionID}`/* , req.signedCookies */)
+    // log('isJwtAuth user: `, user)
+    // log('req.signedCookies ${req.sessionID}`/* , req.signedCookies */)
     req.user = user
     return next()
 
   } catch (e: any) {
-    console.log(`isJwtAuth ->` + e)
+    log(`isJwtAuth ->` + e)
     return res.status(403).json(jsonStatusError)
   }
 }
@@ -117,10 +118,10 @@ export const isJwtAuthWithPassport = (req: Request, res: Response, next: NextFun
     const token = getTokenFromHeader(req)
     if (!token) return res.status(401).json(jsonStatusError)
 
-    console.error(`req.signedCookies ${req.sessionID}`/* , req.signedCookies */)
+    log(`req.signedCookies ${req.sessionID}`/* , req.signedCookies */)
 
 
-    // console.error(`req.cookies`, req.cookies)
+    // log(`req.cookies`, req.cookies)
 
     // if user is authenticated in the session, carry on
     if (token) return next();

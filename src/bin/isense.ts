@@ -6,11 +6,14 @@
 import serve from '../app'
 import https, { Server } from 'https'
 import fs from 'fs'
-import { normalize } from 'path';
+import path, { normalize } from 'path';
 import { DB } from '../db';
-
+import { log } from '../logger/log';
+import { config } from 'dotenv';
 // var debug = require('debug')('technica:server');
 
+config({ path: path.resolve(process.cwd(), '.env') })
+log('node_env', process.env.NODE_ENV)
 var enforce = require('express-sslify')
   , key = fs.readFileSync('server-key.pem')
   , cert = fs.readFileSync('server-crt.pem')
@@ -77,7 +80,7 @@ async function onListening() {
   try {
     await DB.connect();
   } catch (err) {
-    console.error(`Unable to connect to Mongo!`, err);
+    log(`Unable to connect to Mongo!`, err);
   }
   // debug('Listening on ' + bind);
 }
@@ -95,7 +98,7 @@ function normalizePort(val: string) {
 
 function onListen() {
 
-  console.log('Server Running on %s:%s', ip, port)
+  log('Server Running on %s:%s', ip, port)
   return ip
 }
 
@@ -125,4 +128,4 @@ function onError(error: any) {
       throw error;
   }
 }
-console.log('HTTPS Server listening on %s'/* , HOST */, port)
+log('HTTPS Server listening on %s'/* , HOST */, port)

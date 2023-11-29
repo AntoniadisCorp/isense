@@ -5,6 +5,7 @@ import { ObjectId } from "bson";
 import * as jwt from 'jsonwebtoken'
 import { Client, SECRET } from "../interfaces";
 import randtoken from 'rand-token';
+import { log } from "../logger/log";
 // Load required packages
 const oauth2orize = require('oauth2orize'),
     login = require('connect-ensure-login')
@@ -21,7 +22,7 @@ class Auth2 {
     private StartServerAuth2orize() {
 
         Auth2.server = oauth2orize.createServer()
-        if (Auth2.server) console.log('oauth2orize server started..')
+        if (Auth2.server) log('oauth2orize server started..')
 
         // Register serialialization function
         Auth2.server.serializeClient((client: Client, done: any) => { return done(null, client._id) })
@@ -31,7 +32,7 @@ class Auth2 {
             const Redisclient = new MemCache().connect(15000).cb
             Redisclient.hmget('client', `${id}`, (err: any, client: any) => {
                 if (err) { Redisclient.quit(); return done(err); }
-                console.log('deserialized', JSON.parse(client))
+                log('deserialized', JSON.parse(client))
                 Redisclient.quit()
                 return done(null, client);
             })
@@ -50,7 +51,7 @@ class Auth2 {
                     await DB.connect();
                 } else {
 
-                    console.log('Creating a new authorization code...', user)
+                    log('Creating a new authorization code...', user)
                     const dbCollection: Collection = DB.getCollection('code'),
                         // Create a new authorization code
                         code: any = {
@@ -141,7 +142,7 @@ class Auth2 {
 
     public authorization(): RequestHandler[] {
 
-        if (!Auth2.server) { console.log('oauth2orize not running..') }
+        if (!Auth2.server) { log('oauth2orize not running..') }
 
         return [
             login.ensureLoggedIn('/ServiceLogin'),

@@ -1,5 +1,6 @@
 
 import * as nodemailer from 'nodemailer'
+import { log } from '../logger/log';
 const email = require('emailjs')
 const acc = {
     user: 'info@technicalprb.com',
@@ -46,7 +47,7 @@ class Emailer {
         this.server.send(message, (err: any, message: string) => {
             let out = err || message
 
-            console.log('emailjs ', out);
+            log('emailjs ', out);
             return !err ? { info: out } : { error: out }
         });
     }
@@ -87,10 +88,10 @@ class Emailer {
             transporter.sendMail(mailOptions, (error: any, info: any) => {
 
 
-                console.log('Message sent: %s', info && info.messageId ? info.messageId : error);
+                log('Message sent: %s', info && info.messageId ? info.messageId : error);
                 // Preview only available when sending through an Ethereal account
                 if (!error)
-                    // console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
+                    // log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
 
                     callback(info && info.messageId ? info : { error: 'error mail failure' })
                 // Message sent: <b658f8ca-6296-ccf4-8306-87d57a0b4321@blurdybloop.com>
@@ -111,7 +112,7 @@ class Emailer {
                 let rejected = new Error('Message could not sent ');
                 console.log(rejected)
                 callback({ error: rejected })
-            } console.log(`contactPromise: `, respond)
+            } log(`contactPromise: `, respond)
         })
 
 

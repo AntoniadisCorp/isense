@@ -1,4 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express'
+import { log } from '../logger/log';
 const reque = require('request');
 
 class mainRouter {
@@ -97,7 +98,7 @@ class mainRouter {
             "&response=" + req.body['g-recaptcha-response'] + "&remoteip=" + req.connection.remoteAddress
 
         // Hitting GET request to the URL, Google will respond with success or error scenario.
-        console.log('rest::getJSON recaptcha');
+        log('rest::getJSON recaptcha');
 
         reque(verificationUrl, (error: any, res: Response, body: any) => {
 

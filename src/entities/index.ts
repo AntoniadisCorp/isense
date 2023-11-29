@@ -1,10 +1,11 @@
 import crypto from 'crypto'
 import id from '../Id'
-import ipRegex from 'ip-regex'
+
 import buildMakeSource from './source'
 import buildMakeCategory from './category'
+// import ipRegex from 'ip-regex'
 
-const makeSource = buildMakeSource({ isValidIp })
+// const makeSource = buildMakeSource({ isValidIp })
 // const makeBook = buildMakeBook({ Id, md5, sanitize, makeSource })
 
 const makeCategory = buildMakeCategory({ id, md5 })
@@ -29,6 +30,6 @@ function md5(text: string) {
 
 
 
-function isValidIp(ip: string) {
-    return ipRegex({ exact: true }).test(ip)
-}
+// function isValidIp(ip: string) {
+//     return ipRegex({ exact: true }).test(ip)
+// }

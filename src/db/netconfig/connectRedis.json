@@ -21,7 +21,7 @@
       "endpoint": ""
     },
     "dbname": "RedisCache",
-    "host": "localhost",
+    "host": "192.168.1.11",
     "port": 6379,
     "password": "AQW7LospEqeKrPDsjtbLKBHsyOS95hFO"
   }

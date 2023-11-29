@@ -1,5 +1,6 @@
 
 import fpath from 'path'
+import { log } from '../logger/log'
 export const laptop: string = 'C:/Users/kopie/Documents/VSCodeProjects'
 export const desktop: string = 'C:/Users/user/Documents/Projects'
 
@@ -20,4 +21,4 @@ export const IMAGE_DEFAULT_DIR = STORAGE_DEFAULT_DIR + AVATAR_DEFAULT_DIR;
 
 
 
-console.log(`This platform is ${process.platform}`);
+log(`This platform is ${process.platform}`);

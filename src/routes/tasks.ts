@@ -12,6 +12,7 @@ import { gbr, getMinMax, isJwtAuth, missNoArray, dateFormatSystem, isJwtAuthWith
 import { ICategory, OptionEntry } from '../interfaces';
 import { debug } from '../global/routines';
 import { addHierarchyCategory, reconstructDescendants, updateAncestryCategory } from '../entities/category';
+import { log } from '../logger/log';
 
 
 // var arrayToTree = require('array-to-tree');
@@ -56,11 +57,13 @@ class Tasks {
         }
 
 
-        /* this.router.get('/', (req: Request, res: Response) => {
+        this.router.get('/', (req: Request, res: Response) => {
             let tasks = { tArr: ['Task page 0!'] }
             console.log(tasks.tArr)
             res.send(tasks)
         })
+
+        this.router.get('/book', makeExpressCallback(getPaginationBook))
 
         this.router.get('/jobs', function (req: Request, res: Response) {
             let jobs: any = [], jkeys: any = []
@@ -85,14 +88,15 @@ class Tasks {
             })
 
         })
- */
+
+
 
         // We plugin our jwt strategy as a middleware so only verified users can access this route
         this.router.get('/random', isJwtAuthWithPassport, random)
 
         // LIBRARY
         this.router.get('/library/search', isJwtAuth, makeExpressCallback(getLibrary)) // Search for Libraries
-        this.router.get('/library/search/:id', isJwtAuth, makeExpressCallback(getBook)); // Get Single task
+        this.router.get('/library/search/:id', makeExpressCallback(getBook)); // Get Single task
         this.router.get('/library/book/search', isJwtAuth, makeExpressCallback(getPaginationBook)) // Search for Libraries
         this.router.get('/library/book/sku', isJwtAuth, makeExpressCallback(getBookBySKU))
         this.router.get('/library/space/search', isJwtAuth, this.SearchTasks) // Search for Libraries Space
@@ -202,7 +206,7 @@ class Tasks {
 
             Redisclient.quit()
 
-            if (debug.explain) console.log('redisUser', result)
+            if (debug.explain) log('redisUser', result)
             res.status(200).json({
                 code: 200,
                 status: 'success',
@@ -234,7 +238,7 @@ class Tasks {
 
                     dbCollection: Collection = DB.getCollection(collectionName);
 
-                // console.log(`id: ++++++++++++++++++++++++++ ${queryParams.col}`, _id)
+                // log('id: ++++++++++++++++++++++++++ ${queryParams.col}`, _id)
 
                 let query: any = {
                     // root: true,
@@ -470,9 +474,9 @@ class Tasks {
                 pageNumber = parseInt(queryParams.pageNumber) || 1,
                 pageSize = parseInt(queryParams.pageSize) || 10,
                 collectionName: string = queryParams.col,
-                dbCollection: Collection = DB.getCollection(collectionName)
+                dbCollection: Collection = DB.getCollection(collectionName);
 
-            console.log(`Start search in ${collectionName} by ${filter}`)
+            log(`Start search in ${collectionName} by ${filter}`)
 
             // Sorting Direction
             const sortDirection = sortOrder && sortOrder === 'asc' ? 1 : -1
@@ -493,7 +497,7 @@ class Tasks {
             if (extrafilters.length && extrafilters[0].categoryId)
                 extrafilters[0].categoryId = new ObjectId(extrafilters[0].categoryId as string)
 
-            console.log(`search in ${collectionName} by ${filter} ${regex.source}`, queryParams.refField)
+            log(`search in ${collectionName} by ${filter} ${regex.source}`, queryParams.refField)
 
 
 
@@ -582,7 +586,7 @@ class Tasks {
                 collectionName: string = queryParams.col,
                 dbCollection: Collection = DB.getCollection(collectionName);
 
-            console.log(`Start search in ${collectionName} by ${filter}`)
+            log(`Start search in ${collectionName} by ${filter}`)
 
             if (SKU) SKU.replace(/\D/g, '')
 
@@ -598,7 +602,7 @@ class Tasks {
                 regex = new RegExp(gbr.escapeRegex(filter), 'gi')
 
 
-            console.log(`search in ${collectionName} by ${filter} or ${regex2 ? regex2 : ''}, ${regex.source}`, queryParams.refField)
+            log(`search in ${collectionName} by ${filter} or ${regex2 ? regex2 : ''}, ${regex.source}`, queryParams.refField)
 
             if (extrafilters.length && extrafilters[0].categoryId)
                 extrafilters[0].categoryId = new ObjectId(extrafilters[0].categoryId as string)
@@ -722,7 +726,7 @@ class Tasks {
 
         /* const url = req.protocol + '://' + req.get('host')
 
-        console.log(`url: ${url}`/* , req.files ) */
+        log('url: ${url}`/* , req.files ) */
 
         let saved: OptionEntry = await saveBookInDb(req.files, jsonObj)
         // .catch((err: any) => ({ code: 500, status: 'DbError', error: err }))
@@ -756,7 +760,7 @@ class Tasks {
                 if (jsonObj.data._id || !jsonObj.data._id && ks.length) jsonObj.data._id = new ObjectId(!jsonObj.data._id ? ks.pop() : jsonObj.data._id)
 
 
-                console.log('Data Obj ->>> ', jsonObj.data)
+                log('Data Obj ->>> ', jsonObj.data)
 
                 dbCollection.updateOne(jsonObj.data, (err: any, result: any) => {
 
@@ -813,7 +817,7 @@ class Tasks {
                 await DB.connect();
             } else {
 
-                console.log('Test ' + req.params.id, queryParams)
+                log('Test ' + req.params.id, queryParams)
 
                 const dbCollection: Collection = DB.getCollection(String(queryParams.col));
 
@@ -885,7 +889,7 @@ class Tasks {
                 await DB.connect();
             } else {
 
-                console.log('Test', Params)
+                log('Test', Params)
                 const dbCollection: Collection = DB.getCollection(String(Params.col));
 
                 dbCollection.updateOne({
@@ -1065,7 +1069,7 @@ class Tasks {
                 // if (jsonObj.data._id || !jsonObj.data._id && ks.length) jsonObj.data._id = new ObjectId(!jsonObj.data._id ? ks.pop() : jsonObj.data._id)
 
 
-                console.log('Data Obj ->>> ', jsonObj.data)
+                log('Data Obj ->>> ', jsonObj.data)
 
                 let oldValues: any = { ops: [], connection: undefined, result: true }
                 // remove, update old bookshelves as unused
@@ -1106,7 +1110,7 @@ class Tasks {
             } else {
                 const dbCollection: Collection = DB.getCollection('libraryspace') // jsonObj.col
 
-                console.error('jsonObj:', jsonObj)
+                log('jsonObj:', jsonObj)
                 dbCollection.updateOne({ whatnot: jsonObj.data.whatnot, 'bookshelves.name': jsonObj.data.bookshelf }, {
                     $set: { 'bookshelves.$.used': false }
                 }, (err: any) => {

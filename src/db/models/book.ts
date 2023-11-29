@@ -4,6 +4,7 @@ import { shiftRsortNo, shiftRByKey, STORAGE_DEFAULT_DIR, shiftLsortNo, fileImgEr
 import { DB } from '../net';
 import { Book, OptionEntry, ExpressMulterFile, BookCase } from '../../interfaces';
 import chalk from 'chalk'
+import { log } from '../../logger/log';
 
 
 export function setBook(reqBody: any, avatarFile: UploadedFile | null): Book {
@@ -51,7 +52,7 @@ export function setBook(reqBody: any, avatarFile: UploadedFile | null): Book {
 
 export function upBook(formData: any, avatarFile: UploadedFile | null, path: string): Book {
 
-    // console.log('formData: ', formData)
+    // log('formData: ', formData)
     const avatarForm = {
         src: formData.src,
         storageUrl: formData.storageUrl,
@@ -110,7 +111,7 @@ export function upBook(formData: any, avatarFile: UploadedFile | null, path: str
     // remove binary file data
     book.avatar.file.data = Buffer.alloc(1)
 
-    // console.log('avatar: ', book.avatar)
+    // log('avatar: ', book.avatar)
 
     return book
 }
@@ -119,7 +120,7 @@ export async function getBookFromDb(_id: ObjectId | number, col: string, exceptF
 
     const dbCollection: Collection = DB.getCollection(String(col))
 
-    console.log(chalk.whiteBright('get Book from DB "col": ', chalk.underline(String(col)) + '!'))
+    log('get Book from DB "col": ', chalk.underline(String(col)) + '!')
 
     const filter: any = {
         _id,
@@ -136,7 +137,7 @@ export async function getBookFromDb(_id: ObjectId | number, col: string, exceptF
     if (book.bookcase && book.bookcase._id) {
 
         // Logger
-        console.log(chalk.bold.red('get BookCase from DB "col": ', chalk.underline(String(col)) + '!'))
+        log('get BookCase from DB "col": ', chalk.underline(String(col)) + '!')
 
         // Look for BookshelfNo Number
         let bcase = await getBookshelfNo(book.bookcase._id as string, book._id as string)
@@ -177,7 +178,7 @@ export async function saveBookInDb(files: FileArray | undefined | null, reqBody:
 
     const storageUrl = storagePath(avatarFile, STORAGE_DEFAULT_DIR + AVATAR_DEFAULT_DIR)
 
-    console.log(`storageUrl: `, storageUrl)
+    log(`storageUrl: `, storageUrl)
     if (avatarFile) {
         avatarFile.mv(storageUrl)
             /* .then() */
@@ -230,7 +231,7 @@ export async function updateBookinDB(files: FileArray | undefined | null, formDa
 
     const storageUrl = storagePath(avatarFile, STORAGE_DEFAULT_DIR + AVATAR_DEFAULT_DIR)
 
-    console.log(`storageUrl: `, storageUrl)
+    log(`storageUrl: `, storageUrl)
     if (avatarFile) {
         avatarFile.mv(storageUrl)
             /* .then() */
@@ -334,7 +335,7 @@ async function upBookcaseArrIndex2(bookId: ObjectId, bookcaseId: string, bookshe
         _id, bookshelfNo: bookshelfNo + 1
     })
 
-    console.log('arrIndex: ', newBookcase.books.arrIndex)
+    log('arrIndex: ', newBookcase.books.arrIndex)
 
     dbCollectionbook.updateOne({ _id: new ObjectId(bookcaseId) },
         {
@@ -401,7 +402,7 @@ async function appendBookAnywhere(bookId: ObjectId, bookcase: BookCase, bookcase
         _id: bookId, bookshelfNo: bookshelfNo + 1
     })
 
-    // console.log('arrIndex: ', bookcase.books.arrIndex)
+    // log('arrIndex: ', bookcase.books.arrIndex)
 
     // const dbCollectionbook: Collection = DB.getCollection('bookcase')
 

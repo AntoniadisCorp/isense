@@ -14,6 +14,7 @@ import { Collection, Long, ObjectId } from 'mongodb';
 import { DB, MemCache } from '../db';
 import { Client, SECRET, Token } from '../interfaces';
 import GBRoutines, { debug } from '../global/routines'
+import { log } from '../logger/log';
 // import { Auth2 } from './auth2';
 
 const BearerStrategy = require('passport-http-bearer'),
@@ -131,12 +132,12 @@ class Auth {
 
 
         passport.serializeUser((user: any, done: any) => {
-            console.log(`serializeUser: ${JSON.stringify(user._id)}`);
+            log(`serializeUser: ${JSON.stringify(user._id)}`);
             done(null, user._id)
         })
 
         passport.deserializeUser((_id: any, done: any) => {
-            console.log(`deserializeUser: ${JSON.stringify(_id)}`);
+            log(`deserializeUser: ${JSON.stringify(_id)}`);
             done(null, _id)
         })
 
@@ -168,7 +169,7 @@ class Auth {
 
                 // find the user in db if needed. 
                 // This functionality may be omitted if you store everything you'll need in JWT payload.
-                console.log('payload received', jwtPayload);
+                log('payload received', jwtPayload);
                 const expirationDate = new Date(jwtPayload.exp * 1000);
 
 
@@ -259,14 +260,14 @@ class Auth {
                         }
 
 
-                        console.log('newUser: ', newUser)
+                        log('newUser: ', newUser)
                         // store user key to redis
                         const Redisclient = new MemCache().connect(15000).cb
 
                         const huserExist = Redisclient.HEXISTS(`user`, `${user._id}`)
 
-                        if (!huserExist) console.log('Redis user hash does not exist')
-                        if (!!huserExist) console.log('store user key to redis already exist', huserExist)
+                        if (!huserExist) log('Redis user hash does not exist')
+                        if (!!huserExist) log('store user key to redis already exist', huserExist)
                         else {
                             // Get user Library index
                             if (user._session && user._session.libraryId) {
@@ -280,7 +281,7 @@ class Auth {
 
                             Redisclient.hmset(`user`, `${user._id}`, JSON.stringify(newUser), (err: any, redisUser: any) => {
                                 if (err) { ; console.error(err); }
-                                console.log('store user key to redis', redisUser)
+                                log('store user key to redis', redisUser)
                             })
                         }
 
@@ -290,13 +291,13 @@ class Auth {
 
                         // set RefreshToken
                         const refTokenKey: string = refreshToken.substring(0, 31)
-                        console.log(`refreshToken: ${refTokenKey}`)
+                        log(`refreshToken: ${refTokenKey}`)
                         Redisclient.set(
                             refTokenKey,
                             JSON.stringify({ _id: newUser._id, username: newUser.username }),
                             (err: any, redis: any) => {
                                 if (err) console.log(err)
-                                else console.log('redis: ', redis)
+                                else log('redis: ', redis)
                             })
 
                         // Redis Connection Closed
@@ -318,7 +319,7 @@ class Auth {
             const refreshToken: string = req.body.refreshToken;
             const { user, cookie }: any = req.session
 
-            console.info(`logout now, refreshToken: ${refreshToken}`)
+            log(`logout now, refreshToken: ${refreshToken}`)
 
             if (!refreshToken) res.status(400).json(jsonStatusError)
 
@@ -333,10 +334,10 @@ class Auth {
 
             Redisclient.del(refTokenKey, (err: any, num: number) => {
                 if (num < 1) {
-                    console.log(`refreshToken '${refTokenKey}' not found in Redis`)
+                    log(`refreshToken '${refTokenKey}' not found in Redis`)
                     return res.sendStatus(404)
                 }
-                console.log(`refreshToken ${num} '${refTokenKey}' deleted from Redis`, cookie)
+                log(`refreshToken ${num} '${refTokenKey}' deleted from Redis`, cookie)
             })
 
             // Redis Connection Closed
@@ -344,15 +345,15 @@ class Auth {
 
             req.session.destroy((err) => {
                 if (err) {
-                    console.log(`Error Performing logout ${err}`);
+                    log(`Error Performing logout ${err}`);
                     return res.sendStatus(400)
                 } else if (user) {
-                    console.log(`logout user ${user}.`)
+                    log(`logout user ${user}.`)
 
                 } else {
-                    console.log(`logout called by a user without a session.`)
+                    log(`logout called by a user without a session.`)
                 }
-                console.log('Redis Session Destroyed');
+                log('Redis Session Destroyed');
             });
 
             req.logOut({}, err => {
@@ -360,7 +361,7 @@ class Auth {
                     console.log(err);
                     return res.sendStatus(400)
                 }
-                console.log('User Session Logged out');
+                log('User Session Logged out');
             })
 
             return res.sendStatus(204);
@@ -406,8 +407,8 @@ class Auth {
                 if (err || !user) {
                     console.info(err)
                     return next(info)
-                } else console.log('db user saving: ' + JSON.stringify(user));
-                console.log('Signup successful!');
+                } else log('db user saving: ' + JSON.stringify(user));
+                log('Signup successful!');
 
                 return res.json({
                     message: 'Signup successful!',
@@ -452,7 +453,7 @@ class Auth {
 
                         // store key to redis
                         /* const Redisclient = new MemCache().connect(15000).cb
-                        Redisclient.hmset(`client`, `${client._id}`, JSON.stringify(client), (err, client) => {
+                        Redisclient.hmset(`client`, `${ client._id }`, JSON.stringify(client), (err, client) => {
                             if (err) { Redisclient.quit(); console.error(err); }
                             Redisclient.quit()
                         }) */
@@ -480,7 +481,7 @@ class Auth {
             if (err) {
                 console.log(err);
             } else {
-                console.log('User Session Logged out');
+                log('User Session Logged out');
             }
         })
         res.sendStatus(204).redirect('/');
@@ -498,7 +499,7 @@ class Auth {
             } else {
 
                 //Save the information provided by the user to the the database
-                console.log('user: ' + JSON.stringify(username));
+                log('user: ' + JSON.stringify(username));
                 const dbCollection: Collection = DB.getCollection('user');
 
                 //Find the user associated with the email provided by the user
@@ -511,7 +512,7 @@ class Auth {
                 // In case of any error return
 
                 if (!userExist) {
-                    console.log('User not exist in DataBase.');
+                    log('User not exist in DataBase.');
                     // return done(null, false, { message: "User does not Exist" });
                 }
 
@@ -519,7 +520,7 @@ class Auth {
                 if (!!userExist) {
                     return done(null, false, { message: 'User Already Exists' });
                 } else {
-                    console.info(`trying to register...`)
+                    log(`trying to register...`)
                     let user = {
                         username,
                         password: gbr.createHash(password)
@@ -528,7 +529,7 @@ class Auth {
                     // save the user
                     dbCollection.insertOne(user, (err: any, user: any) => {
                         if (err) {
-                            console.error('Error in Saving user: ', err);
+                            log('Error in Saving user: ', err);
                             return done(null, false, { message: 'Error in Saving user, ' + err });
                         }
                         // if there is no user with that email
@@ -554,7 +555,7 @@ class Auth {
         // Auth Check Logic
         // check in mongo if a user with username exists or not
         try {
-            if (debug.explain) console.log('username ' + username + ' password ' + password);
+            if (debug.explain) log('username ' + username + ' password ' + password);
 
             // Check DB Connection
             if (!DB.isConnected()) { // trying to reconnect
@@ -571,7 +572,7 @@ class Auth {
 
                 // Username does not exist, log error & redirect back
                 if (!user) {
-                    if (debug.explain) console.log('User Not Found by username ' + username);
+                    if (debug.explain) log('User Not Found by username ' + username);
                     //If the user isn't found in the database, return a message
                     return done(null, false, { message: 'Your credentials was incorrect. Try again.' });
                 }
@@ -581,7 +582,7 @@ class Auth {
                 // User exists but wrong password, log the error 
 
                 if (!gbr.isValidPassword(user, password)) {
-                    if (debug.explain) console.log('User Invalid password:  ' + password + '!!!');
+                    if (debug.explain) log('User Invalid password:  ' + password + '!!!');
                     return done(null, false, { message: 'Your credentials was incorrect. Try again.' });
                 }
 
@@ -592,7 +593,7 @@ class Auth {
                 return done(null, user, { status: 'success', message: 'Logged in Successful' });
             }
         } catch (error) {
-            if (debug.explain) console.error(`Unable to connect to Mongo!`, error);
+            if (debug.explain) log(`Unable to connect to Mongo!`, error);
             return done(error);
         }
         // Delay the execution of findOrUserLoggin and execute 
@@ -646,7 +647,7 @@ export function getCollectionById(query: any): Promise<any> {
                 await DB.connect();
             } else {
 
-                console.log('Test ' + queryParams.id, queryParams)
+                log('Test ' + queryParams.id, queryParams)
 
                 const dbCollection: Collection = DB.getCollection(queryParams.col);
 
@@ -657,7 +658,7 @@ export function getCollectionById(query: any): Promise<any> {
                     recyclebin: false
                 }
 
-                console.log('getCollectionById filter: ', filter)
+                log('getCollectionById filter: ', filter)
 
                 dbCollection.findOne(filter, exceptFields, (err: any, result: any) => {
 

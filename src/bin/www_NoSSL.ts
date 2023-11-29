@@ -6,6 +6,7 @@
 import https from 'http'
 import serve from '../app'
 import { DB } from '../db';
+import { log } from '../logger/log';
 
 // import fs from 'fs'
 // import { normalize } from 'path';
@@ -77,7 +78,7 @@ function normalizePort(val: string) {
 
 function onListen() {
 
-  console.log('HTTP Server listening on %s:%s', ip, port)
+  log('HTTP Server listening on %s:%s', ip, port)
   return ip
 }
 
@@ -120,7 +121,7 @@ async function onListening() {
   try {
     await DB.connect()
   } catch (err) {
-    console.error(`Unable to connect to Mongo!`, err);
+    log(`Unable to connect to Mongo!`, err);
   }
   // debug('Listening on ' + bind);
 }

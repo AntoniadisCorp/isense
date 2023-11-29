@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from 'express'
 import { OptionEntry } from '../interfaces'
+import { log } from '../logger/log'
 
 // set Headers and methods
 
@@ -27,7 +28,7 @@ export const makeExpressCallback = (controller: any) => {
             }
         }
 
-        console.log(`TEST ------ makeExpressCallback`)
+        log(`TEST ------ makeExpressCallback`)
 
         controller(httpRequest)
             .then((httpResponse: OptionEntry) => {

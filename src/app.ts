@@ -28,8 +28,12 @@ import fileUpload from 'express-fileupload'
 import { ServerOptions } from 'socket.io'
 import { makeExpressCallback } from './express-callback'
 import { notFound } from './controllers'
+import { log } from './logger/log'
+import { config } from 'dotenv'
 
 var device = require('express-device');
+config()
+log('NODE ENV', process.env.NODE_ENV)
 // attach session to RedisStore
 const RedisStore = connect_redis(session)
 //   helmet  = require('helmet')
@@ -71,7 +75,7 @@ class Server {
     private authObject: Auth;
 
     // set Routines Adresses Objects and Server Port
-    private env: string = process.env.NODE_ENV || 'production'
+    private env: string = process.env.NODE_ENV ?? 'production'
 
     // CONSTRUCTOR CLASS
     constructor() {
@@ -190,10 +194,10 @@ class Server {
                 sQWid!.views = sQWid!.views ? sQWid!.views + 1 : 1
                 // req.session!.passport = ?
 
-                if (req.cookies) console.error('Cookies: ', req.cookies)
+                if (req.cookies) log('Cookies: ', req.cookies)
 
                 var expireTime = sQWid.cookie.maxAge / 1000;
-                console.warn(`${req.ip} ${req.method} ${req.url} by sessionID ${req.sessionID} expireTime: ${expireTime}`/* , req.session */, req.session)
+                log(`${req.ip} ${req.method} ${req.url} by sessionID ${req.sessionID} expireTime: ${expireTime}`/* , req.session */, req.session)
 
                 /*  let requestSize = 0;
                  req.on('data', (chunk) => {
@@ -202,13 +206,13 @@ class Server {
 
                 res.on('finish', () => {
                     const durationInMilliseconds = getDurationInMilliseconds(start)
-                    console.log(`${req.method} ${req.originalUrl} [FINISHED] ${durationInMilliseconds.toLocaleString()} ms `)
+                    log(`${req.method} ${req.originalUrl} [FINISHED] ${durationInMilliseconds.toLocaleString()} ms `)
 
                 })
 
                 res.on('close', () => {
                     const durationInMilliseconds = getDurationInMilliseconds(start)
-                    console.log(`${req.method} ${req.originalUrl} [CLOSED] ${durationInMilliseconds.toLocaleString()} ms `)
+                    log(`${req.method} ${req.originalUrl} [CLOSED] ${durationInMilliseconds.toLocaleString()} ms `)
 
                 })
 
@@ -245,15 +249,15 @@ class Server {
                 // res.sendFile(fpath.join(__dirname + '/public/dist/ind.html'))
             }
             // Cookies that have not been signed
-            console.log('----> New User connected ' + `https://${req.headers.host}${req.url}`)
+            log(`----> New User connected ' + `https://${req.headers.host}${req.url}`)
         
-            console.log('DATE: ' + new Date()+' '+req.connection.remoteAddress +' '+req.method+' '+req.url+' '); 
+            log('DATE: ' + new Date()+' '+req.connection.remoteAddress +' '+req.method+' '+req.url+' '); 
             // Cookies that have not been signed
-            console.log('Cookies: ', req.cookies)
+            log('Cookies: ', req.cookies)
         
             // Cookies that have been signed
-            console.log('Signed Cookies: ', req.signedCookies)
-            // console.log('session Cookies: ', req.session)
+            log('Signed Cookies: ', req.signedCookies)
+            // log('session Cookies: ', req.session)
         
             
         }) */

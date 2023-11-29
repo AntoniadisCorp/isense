@@ -6,6 +6,7 @@ Save the following server in example.js:
 */
 // var sys = require('sys')
 let net = require('net')
+import { log } from '../logger/log'
 import GBRoutines from './routines'
 // import * as gps from 'gps-tracking'
 // let gps = require('gps-tracking');
@@ -52,7 +53,7 @@ class TcpSocketServer {
         
             device.on("login_request",function(device_id: any,msg_parts:string){
         
-                console.log('Hey! I want to start transmiting my position. Please accept me. My name is '+device_id);
+                log('Hey! I want to start transmiting my position. Please accept me. My name is '+device_id);
         
                 device.login_authorized(true); 
         
@@ -91,18 +92,18 @@ class TcpSocketServer {
             HOST = this.gpsOptions.host, PORT = this.gpsOptions.port;
 
         client.connect(PORT, HOST, function () {
-            console.log('Client connected to: ' + HOST + ':' + PORT);
+            log('Client connected to: ' + HOST + ':' + PORT);
             // Write a message to the socket as soon as the client is connected, the server will receive it as message from the client 
             client.write('(009205906401BP05000009205906401190629A2321.5726N08518.8931E000.01027100.000001000000L076864EE)');
 
         });
 
         client.on('data', function (data: any) {
-            console.log('Client received: ' + data);
+            log('Client received: ' + data);
             let ival = 10000
             setInterval(() => {
 
-                console.log(`Client writing interval: ${ival}` + data);
+                log(`Client writing interval: ${ival}` + data);
                 client.write('(009205906401BR00190629A2321.5729N08518.8934E000.01033420.000001000007L076864EE)');
             }, ival)
             if (data.toString().endsWith('exit')) {
@@ -112,7 +113,7 @@ class TcpSocketServer {
 
         // Add a 'close' event handler for the client socket
         client.on('close', function () {
-            console.log('Client closed');
+            log('Client closed');
         });
 
         client.on('error', function (err: any) {
@@ -133,28 +134,28 @@ class TcpSocketServer {
         // incoming data, i.e. update a map 
         this.server.on('track', (gps: any) => {
             //updateMap (gps.geo.latitude, gps.geo.longitude);
-            // console.log('GPS: ', `${gps.geo.latitude} ${gps.geo.longitude}`);
+            // log('GPS: ', `${gps.geo.latitude} ${gps.geo.longitude}`);
         });
 
         this.server.on('data', (raw: any) => {
-            console.log('Incoming data: ' + raw);
+            log('Incoming data: ' + raw);
         });
 
         this.server.on('listening', (listen: any) => {
             // listen = { port: 56751, family: 2, address: '0.0.0.0' } 
-            console.log('listening from ', listen);
+            log('listening from ', listen);
         });
 
         this.server.on('connection', (socket: any) => {
-            console.log('Connection from ' + socket.remoteAddress);
+            log('Connection from ' + socket.remoteAddress);
         });
 
         this.server.on('disconnect', (socket: any) => {
-            console.log('Disconnected device ' + socket.remoteAddress);
+            log('Disconnected device ' + socket.remoteAddress);
         });
 
         this.server.on('timeout', (socket: any) => {
-            console.log('Time out from ' + socket.remoteAddress);
+            log('Time out from ' + socket.remoteAddress);
         });
         this.server.on('fail', (err: any) => {
             console.log(err);
@@ -165,7 +166,7 @@ class TcpSocketServer {
         });
 
         this.server.on('log', (name: any, value: any) => {
-            console.log('Event: ' + name);
+            log('Event: ' + name);
             console.log(value);
         });
 
@@ -188,12 +189,12 @@ class TcpSocketServer {
                     this.sockets = sockets;
                     return;
                 }
-                console.log(`Tcp IP Server side Received from Client: ${data}`)
+                log('Tcp IP Server side Received from Client: ${data}`)
                  var len = sockets.length;
                 for (var i = 0; i < len; i ++) { // broad cast
                     if (sockets[i] != socket) {
                         if (sockets[i]) {
-                            console.log('broadcast')
+                            log('broadcast')
                             sockets[i].write(socket.remoteAddress + ':' + socket.remotePort + ':' + data);
                         }
                     }

@@ -101,7 +101,7 @@ export async function addHierarchyCategory(_id: ObjectId, parentId: ObjectId): P
 
       let parent = await dbCollection.findOne({ '_id': parentId, projection: { 'name': 1, 'slug': 1, 'tree': 1 } })
 
-      // console.log('parent:: ->', parent)
+      // log('parent:: ->', parent)
 
       const parentObj = { _id: parent!._id, name: parent!.name, slug: parent!.slug }
 
@@ -169,7 +169,7 @@ export async function reconstructDescendants(dbCollection: Collection, _id: Obje
   // You can use the following loop to reconstruct all the descendants of the “name” category
   const categories: any = dbCollection.find({ 'tree._id': _id, projection: { 'parentId': 1 } })
 
-  // console.log(`categories:`, categories)
+  // log('categories:`, categories)
   categories.forEach((category: { _id: ObjectId, parentId: ObjectId }) => {
     rebuildHierarchyCategory(category._id, category.parentId)
   })

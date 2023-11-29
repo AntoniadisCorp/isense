@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import { Collection, Db, FindCursor, ObjectId } from 'mongodb';
 import { gbr } from '../global';
 import id from '../Id'
+import { log } from '../logger/log';
 
 export default function makeBookDb({ makeDb }: any) {
   return Object.freeze({
@@ -50,7 +51,7 @@ export default function makeBookDb({ makeDb }: any) {
   async function findById({ id: _id, col, exceptFields }: any) {
     const db: Db = await makeDb()
 
-    // console.log(chalk.whiteBright('get Book from DB "col": ', chalk.underline(String(col)) + '!'))
+    // log('get Book from DB "col": ', chalk.underline(String(col)) + '!'))
     const book = await db.collection(String(col)).findOne({ _id }, exceptFields)
 
     if (!book) {
@@ -64,7 +65,7 @@ export default function makeBookDb({ makeDb }: any) {
   async function findByPagination({ query, sort, pageNumber, pageSize }: any) {
     const db: Db = await makeDb()
 
-    console.log(chalk.whiteBright('search Book from DB "col": ', chalk.underline(String(query.col)) + '!'))
+    log('search Book from DB "col": ', chalk.underline(String(query.col)) + '!')
 
     const books: any[] = await db.collection('book').find(query)
       .sort(sort)

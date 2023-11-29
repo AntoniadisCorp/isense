@@ -1,5 +1,6 @@
 import { ObjectId } from "mongodb"
 import { gbr } from "../global"
+import { log } from "../logger/log"
 
 export default function makePageBooks({ BookDB }: any) {
     return async function paginationBooks({ query }: any = {}) {
@@ -22,7 +23,7 @@ export default function makePageBooks({ BookDB }: any) {
             pageSize = parseInt(query.pageSize) || 10,
             collectionName: string = query.col
 
-        console.log(`Start search in ${collectionName} by ${filter}`)
+        log(`Start search in ${collectionName} by ${filter}`)
 
 
         if (SKU) SKU.replace(/\D/g, '')
@@ -38,7 +39,7 @@ export default function makePageBooks({ BookDB }: any) {
         const regex2 = Number(SKU),
             regex = new RegExp(gbr.escapeRegex(filter), 'gi')
 
-        console.log(`search in ${collectionName} by ${filter} or ${regex2 ? regex2 : ''}, ${regex.source}`, query.refField)
+        log(`search in ${collectionName} by ${filter} or ${regex2 ? regex2 : ''}, ${regex.source}`, query.refField)
 
         if (extrafilters.length && extrafilters[0].categoryId)
             extrafilters[0].categoryId = new ObjectId(extrafilters[0].categoryId as string)

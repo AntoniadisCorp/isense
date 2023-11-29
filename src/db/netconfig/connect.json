@@ -2,7 +2,7 @@
   {
     "_common": "// Local Pure Mongo DB v4.2.1",
     "dbname": "dbsense",
-    "mongoUri": "mongodb://127.0.0.1:27017/?compressors=zlib&zlibCompressionLevel=-1",
+    "mongoUri": "mongodb://192.168.1.11:27017/?compressors=zlib&zlibCompressionLevel=-1",
     "mongoCFG": {
       "keepAlive": true,
       "connectTimeoutMS": 30000,
