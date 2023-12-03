@@ -1,4 +1,4 @@
-import { env } from "process"
+
 
 const getLog = () => {
 
@@ -10,5 +10,5 @@ const getLog = () => {
 
 }
 
-const log = env.NODE_ENV === "production" ? () => { } : getLog()
+const log = process.env.NODE_ENV == "production" ? () => { } : getLog()
 export { log }

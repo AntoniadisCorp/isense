@@ -4,23 +4,35 @@
  * Module dependencies.
  */
 import serve from '../app'
-import https, { Server } from 'https'
+// import https, { Server } from 'https'
+// import spdy from 'spdy';
+import http2 from 'http2';
 import fs from 'fs'
 import path, { normalize } from 'path';
 import { DB } from '../db';
 import { log } from '../logger/log';
 import { config } from 'dotenv';
+
 // var debug = require('debug')('technica:server');
 
-config({ path: path.resolve(process.cwd(), '.env') })
-log('node_env', process.env.NODE_ENV)
-var enforce = require('express-sslify')
-  , key = fs.readFileSync('server-key.pem')
-  , cert = fs.readFileSync('server-crt.pem')
+config(/* { path: path.resolve(process.cwd(), '.env') } */)
+/* type Protocol =
+  | "h2"
+  | "spdy/3.1"
+  | "spdy/3"
+  | "spdy/2"
+  | "http/1.1"
+  | "http/1.0"; */
+
+// let protocols: Protocol[] = ['h2', 'spdy/3.1', 'http/1.1']
+let enforce = require('express-sslify')
+  , key = fs.readFileSync('server.key')
+  , cert = fs.readFileSync('server.crt')
   // , pfx = fs.readFileSync('smartdeep.io.pfx')
   , options = {
     key: key,
     cert: cert,
+    allowHTTP1: true
     /*   pfx,
        passphrase: 'For(Life#0)'
      
@@ -48,7 +60,7 @@ serve.app.set('ip', ip);
  */
 // for https
 serve.app.use(enforce.HTTPS({ trustProtoHeader: true }))
-let server: Server = https.createServer(options, serve.app);
+let server: any = http2.createSecureServer(options, serve.app);
 
 /**
  * Listen on provided port, on all network interfaces.

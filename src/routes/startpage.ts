@@ -1,5 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express'
 import { log } from '../logger/log';
+import { makeServerCallback } from '../express-callback';
+import { OptionEntry } from '../interfaces';
 const reque = require('request');
 
 class mainRouter {
@@ -26,17 +28,45 @@ class mainRouter {
     httpRoutesGets(): void {
 
 
-        this.router.get('/ServiceLogin', this.ServiceLogin) // get ServiceLogin
+        this.router.get('/ServiceLogin', makeServerCallback(this.ServiceLogin)) // get ServiceLogin
 
-        const startPage = async (req: Request, res: Response) => {
-            let d = { message: 'Hello World!', sessionInfo: '' }
-            if (req.session && req.session!.id) {
-                d = { message: 'Hello Redis World!', sessionInfo: req.session!.id, }
+        const startPage = async (req: Request, httpRequest: any) => {
+
+            const headers = {
+                ...httpRequest.headers,
+                'Content-Type': 'application/json'
+
             }
-            console.log(d.message)
-            res.render('index', d)
+            let d = { message: 'Hello World!', sessionInfo: '' }
+            // log('headers ', headers)
+            try {
+                // find for firstname and lastname and mobile
+
+                if (req.session && req.session!.id) {
+                    d = { message: 'Hello Redis World!', sessionInfo: req.session!.id, }
+                }
+                return {
+                    headers,
+                    code: 200,
+                    status: 'success',
+                    view: 'index',
+                    data: { result: d, message: '' }
+                }
+            } catch (e: any) {
+                // TODO: Error logging
+                log(e)
+                return {
+                    headers,
+                    code: 400,
+                    status: 'error',
+                    view: 'error',
+                    data: {
+                        error: e.message
+                    }
+                }
+            }
         }
-        this.router.get('/', startPage)
+        this.router.get('/', makeServerCallback(startPage))
     }
 
     /**
@@ -76,9 +106,50 @@ class mainRouter {
     //     }
     //   }
 
-    async ServiceLogin(req: Request, res: Response, next: NextFunction) {
-        if (req.isAuthenticated()) res.redirect('/')
-        res.render('signin')
+    async ServiceLogin(req: any, httpRequest: Request): Promise<OptionEntry> {
+
+        const headers = {
+            ...httpRequest.headers,
+            'Content-Type': 'application/json'
+
+        }
+
+        try {
+            let d
+            let sessionInfo = req.session && req.session!.id
+            // find for firstname and lastname and mobile
+            if (req.isAuthenticated())
+                return {
+                    headers,
+                    code: 200,
+                    status: 'success',
+                    view: 'index',
+                    data: { message: 'you are not logged in!', sessionInfo }
+                }
+
+            if (sessionInfo) {
+                d = { message: 'Hello Redis World!', sessionInfo }
+            }
+            return {
+                headers,
+                code: 200,
+                status: 'success',
+                view: 'signin',
+                data: { result: d, message: '' }
+            }
+        } catch (e: any) {
+            // TODO: Error logging
+            log(e)
+            return {
+                headers,
+                code: 400,
+                status: 'error',
+                view: 'error',
+                data: {
+                    error: e.message
+                }
+            }
+        }
     }
 
 

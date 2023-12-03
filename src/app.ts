@@ -19,7 +19,9 @@ import { mainRouter, Tasks, Auth } from './routes'
 // Configuring Passport
 import passport from 'passport'
 import session from 'express-session'
-let connect_redis = require('connect-redis')
+import connect_redis from 'connect-redis'
+
+
 
 import { NodeSetSessionOptions } from './db/serverconfig/redisOptions'
 
@@ -30,10 +32,14 @@ import { makeExpressCallback } from './express-callback'
 import { notFound } from './controllers'
 import { log } from './logger/log'
 import { config } from 'dotenv'
+import compression from 'compression';
+import http2Express from 'http2-express-bridge'
 
-var device = require('express-device');
+// var device = require('express-device');
+const ejs = require('ejs')
 config()
-log('NODE ENV', process.env.NODE_ENV)
+
+
 // attach session to RedisStore
 const RedisStore = connect_redis(session)
 //   helmet  = require('helmet')
@@ -82,13 +88,10 @@ class Server {
 
 
         // Create Express Application
-        this.app = express()
+        this.app = http2Express(express)
 
-        // TODO: figure out DNT compliance.
-        this.app.use((_, res, next) => {
-            res.set({ Tk: '!' })
-            next()
-        })
+        // set up compression in express
+        // this.app.use(compression())
 
         // Routes Objects
         this.routeObject = new mainRouter()
@@ -110,7 +113,7 @@ class Server {
             }))
 
         // this.PORT = 'production' == this.env ? process.env.OPENSHIFT_NODEJS_PORT || this.PORT : this.PORT
-        this.PORT = process.env.PORT || this.PORT
+        this.PORT = process.env.PORT ?? this.PORT
         this.IP = process.env.IP || 'localhost'
 
         this.mainServe()
@@ -118,182 +121,164 @@ class Server {
 
     private mainServe(): void {
 
-        // Express File uploading
-        this.app.use(fileUpload());
-        // View Engine
-        this.app.use(express.static(fpath.join(__dirname, 'public')))
-        this.app.use(favicon(fpath.join(__dirname, 'public', 'favicon.ico')))
-
-        // Set Static Folder .well-known production
-        // this.app.use(express.static(fpath.join(__dirname, '../','.well-known')))
-
-        this.app.engine('ejs', require('ejs').__express)
-        this.app.set('views', fpath.join(__dirname, 'views'))
-        this.app.set('view engine', 'ejs')
 
         /**
-         * HTTP Strict Transport Security (HSTS)
-         * This solution is to tell the browser to never make HTTP requests again
-         *  */
+       * HTTP Strict Transport Security (HSTS)
+       * This solution is to tell the browser to never make HTTP requests again
+       *  */
         /* this.app.use(helmet.hsts({
             maxAge: 7776000000,
             includeSubdomains: true
           })); */
 
 
-        // Cookie Session
-        /* this.app.use(cookieSession({
-            keys: ["keyboard cat cat1","keyboard cat cat2"],
-            // secret: 'tobo!',
-            maxAge: 60 * 60 * 1000,
-        })) */
+        // View Engine
+        // Set Static Folder .well-known production
+        this.app.use(express.static(fpath.join(__dirname, 'public')))
+        this.app.use(favicon(fpath.join(__dirname, 'public', 'favicon.ico')))
 
-        // cookieParser
-        // this.app.use(cookieParser('secretSign#143_!223'))
+        this.app.engine('ejs', ejs.__express)
+        this.app.set('views', fpath.join(__dirname, 'views'))
+        this.app.set('view engine', 'ejs')
+
+
+
         // Body Parser MW
         this.app.use(express.urlencoded({ limit: '3mb', extended: false }));
         this.app.use(express.json({ limit: '3mb' })) // To parse the incoming requests with JSON payloads
 
-
-
+        // Express File uploading
+        this.app.use(fileUpload());
+        // this.app.set('trust proxy', 1) // trust first proxy
 
         // SET PASSPORT AND SESSION OPTIONS
         this.app.use(session(this.sessionOptions))
         this.app.use(passport.initialize())
         this.app.use(passport.session())
 
-        this.app.use(device.capture())
 
-        /* this.app.use((_, res, next) => {
-            res.set({ Tk: '!' })
-            next()
-        }) */
         // set Headers and methods
-        this.app.use((req: Request, res: Response, next: NextFunction) => {
-
-            // if (req.session && !req.session!.views) {
-            res.header('Access-Control-Allow-Origin', 'http://localhost:4200')
-            res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, X-Auth-Token, Authorization')
-            res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
-            res.header('Access-Control-Allow-Credentials', 'true')
-
-            // res.header('Content-Type', req.get('Content-Type'))
-            res.header('Referer', req.get('referer'))
-            res.header('User-Agent', req.get('User-Agent'))
-            // }
-
-
-            if ('OPTIONS' == req.method) {
-                res.sendStatus(200)
-            } else {
-
-                const start = process.hrtime()
-
-                let sQWid: any = req.session;
-
-                sQWid!.views = sQWid!.views ? sQWid!.views + 1 : 1
-                // req.session!.passport = ?
-
-                if (req.cookies) log('Cookies: ', req.cookies)
-
-                var expireTime = sQWid.cookie.maxAge / 1000;
-                log(`${req.ip} ${req.method} ${req.url} by sessionID ${req.sessionID} expireTime: ${expireTime}`/* , req.session */, req.session)
-
-                /*  let requestSize = 0;
-                 req.on('data', (chunk) => {
-                     requestSize += Buffer.from(chunk).length;
-                 }); */
-
-                res.on('finish', () => {
-                    const durationInMilliseconds = getDurationInMilliseconds(start)
-                    log(`${req.method} ${req.originalUrl} [FINISHED] ${durationInMilliseconds.toLocaleString()} ms `)
-
-                })
-
-                res.on('close', () => {
-                    const durationInMilliseconds = getDurationInMilliseconds(start)
-                    log(`${req.method} ${req.originalUrl} [CLOSED] ${durationInMilliseconds.toLocaleString()} ms `)
-
-                })
-
-
-                next()
-            }
-            /* this.app.use(
-                async function (req: Request, res: Response, next: NextFunction) {
-                    const {c: req.bodySize as any } = await new Promise(function (resolve) {
-                        let requestSize = 0;
-                        req.on('data', (chunk) => {
-                            requestSize += Buffer.from(chunk).length;
-                        });
-                        req.on('end', () => {
-                            return resolve(requestSize)
-                        });
-                    });
-                    next();
-                }) */
-
-        })
-
-        /* this.app.use( (req:Request, res:Response, next: NextFunction) => { // app.all('*')
-
-            var schema = (req.headers['x-forwarded-proto'] || 'none');
-            
-            if ( req.hostname != 'localhost' && schema != 'https' ) {
-        
-                // res.set('x-forwarded-proto', 'https');
-                // res.redirect('https://' + req.get('host') + req.url);
-        
-            } else {
-                // Use res.sendFile, as it streams instead of reading the file into memory.
-                // res.sendFile(fpath.join(__dirname + '/public/dist/ind.html'))
-            }
-            // Cookies that have not been signed
-            log(`----> New User connected ' + `https://${req.headers.host}${req.url}`)
-        
-            log('DATE: ' + new Date()+' '+req.connection.remoteAddress +' '+req.method+' '+req.url+' '); 
-            // Cookies that have not been signed
-            log('Cookies: ', req.cookies)
-        
-            // Cookies that have been signed
-            log('Signed Cookies: ', req.signedCookies)
-            // log('session Cookies: ', req.session)
-        
-            
-        }) */
+        this.app.use(setcustomOptions)
+        // this.app.use(clientRecognition)
 
         // USE ROUTES
         this.app.use('/', this.routeObject.router)
 
-        // secure Route
+        // USE SECURE ROUTES
         this.app.use('/auth', this.authObject.router)
         this.app.use('/task', this.taskObject.router)
         this.app.use(makeExpressCallback(notFound))
 
-        // // will print stacktrace
-        /* if (this.app.get('env') === 'development') {
-
-            this.app.use( (err: any, req: Request, res: Response, next: NextFunction) => {
-                res.status(err.status || 500);
-                res.render('error', {
-                    message: err.message,
-                    error: err
-                });
-            });
-        }
-        */
-        // production error handler no stacktraces leaked to user
-        /* this.app.use((err: any, req: Request, res: Response) => {
-            res.status(err.status || 500);
-            res.render('error', {
-                message: err.message,
-                error: {}
-            })
-        }) */
     }
 
 }
 
 
+const shouldCompress = (req: Request, res: Response) => {
+    // don't compress responses asking explicitly not
+    if (req.headers['x-no-compression']) {
+        return false
+    }
+
+    // use compression filter function
+    return compression.filter(req, res)
+}
+
+const setcustomOptions = async (req: Request, res: Response, next: NextFunction) => {
+
+
+    /* res.header('Access-Control-Allow-Origin', 'http://localhost:4200')
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, X-Auth-Token, Authorization')
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
+    res.header('Access-Control-Allow-Credentials', 'true')
+
+    res.header('Referer', req.get('referer'))
+    res.header('User-Agent', req.get('User-Agent')) */
+
+    if ('OPTIONS' == req.method) {
+        res.sendStatus(200)
+    } else {
+
+        const start = process.hrtime()
+
+        let sQWid: any = req.session;
+
+        sQWid!.views = sQWid!.views ? sQWid!.views + 1 : 1
+
+        if (req.cookies) log('Cookies: ', req.cookies)
+
+        // get the size of bytes that read from request
+        /*  let requestSize = 0;
+         req.on('data', (chunk) => {
+             requestSize += Buffer.from(chunk).length;
+         }); */
+
+        res.on('finish', () => {
+            const durationInMilliseconds = getDurationInMilliseconds(start)
+            log(`${req.ip} ${req.method} ${req.originalUrl} by sessionID ${req.sessionID} with cookie expireTime: ${sQWid.cookie.maxAge / 1000} [FINISHED] in ${durationInMilliseconds.toLocaleString()} ms, views ${sQWid!.views} `)
+
+        })
+
+        res.on('close', () => {
+            const durationInMilliseconds = getDurationInMilliseconds(start)
+            log(`${req.ip} ${req.method} ${req.originalUrl} by sessionID ${req.sessionID} with cookie expireTime: ${sQWid.cookie.maxAge / 1000} [CLOSED] in ${durationInMilliseconds.toLocaleString()} ms `)
+
+        })
+
+        return next()
+    }
+}
+
+const clientRecognition = async (req: Request, res: Response, next: NextFunction) => { // app.all('*')
+
+    // var schema = (req.headers['x-forwarded-proto'] || 'none'); // app.all('*')
+
+    /*  if (req.hostname != 'localhost' && schema != 'https') {
+ 
+         // res.set('x-forwarded-proto', 'https');
+         // res.redirect('https://' + req.get('host') + req.url);
+ 
+     } else {
+         // Use res.sendFile, as it streams instead of reading the file into memory.
+         // res.sendFile(fpath.join(__dirname + '/public/dist/ind.html'))
+     } */
+    // Cookies that have not been signed
+    log('----> New User connected ' + `https://${req.headers.host}${req.url}`)
+
+    log('DATE: ' + new Date() + ' ' + req.socket.remoteAddress + ' ' + req.method + ' ' + req.url + ' ');
+
+    // Cookies that have not been signed
+    log('Cookies: ', req.cookies)
+
+    // Cookies that have been signed
+    log('Signed Cookies: ', req.signedCookies)
+    // log('session Cookies: ', req.session)
+
+    return next()
+}
+
 export default new Server()
 
+
+
+/* this.app.use( async function (req: Request, res: Response, next: NextFunction) {
+    const {c: req.bodySize as any } = await new Promise(function (resolve) {
+        let requestSize = 0;
+        req.on('data', (chunk) => {
+            requestSize += Buffer.from(chunk).length;
+        });
+        req.on('end', () => {
+            return resolve(requestSize)
+        });
+    });
+    return next();
+}) */
+// Cookie Session
+/* this.app.use(cookieSession({
+    keys: ["keyboard cat cat1","keyboard cat cat2"],
+    // secret: 'tobo!',
+    maxAge: 60 * 60 * 1000,
+})) */
+
+// cookieParser
+// this.app.use(cookieParser('secretSign#143_!223'))

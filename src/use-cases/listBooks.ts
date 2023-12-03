@@ -38,10 +38,7 @@ export function makeListBooksBySKU({ BookDB }: any) {
             let no = getMinMax(missNoArray(SKU)),
                 minMax = getMinMax(SKU).max
 
-            no.min ? no.min : minMax >= 0 ? minMax + 1 : 0 /* arrayToTree(categories, {
-            parentProperty: 'parentId',
-            customID: '_id'
-        }) */
+            no.min ? no.min : minMax >= 0 ? minMax + 1 : 0
 
             return no
         } else return {}

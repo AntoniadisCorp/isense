@@ -667,7 +667,7 @@ export function getCollectionById(query: any): Promise<any> {
                 })
             }
         } catch (error) {
-            console.log(error)
+            log(error)
             reject({ code: 500, status: 'error', result: error })
         }
     })

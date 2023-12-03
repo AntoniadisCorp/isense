@@ -9,6 +9,7 @@ export interface OptionEntry {
     code: number
     status: string
     data?: entryData | any
+    view?: string
     error?: any
 }
 

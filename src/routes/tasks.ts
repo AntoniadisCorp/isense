@@ -15,27 +15,18 @@ import { addHierarchyCategory, reconstructDescendants, updateAncestryCategory } 
 import { log } from '../logger/log';
 
 
-// var arrayToTree = require('array-to-tree');
-
-
-interface tk103Device {
-
-    oldpass: string
-}
-
 /* 
     Most Important Tasks, Main Tasks
 */
 class Tasks {
 
     public router: Router
-    public tk103: tk103Device
+    // public tk103: tk103Device
     constructor() {
 
 
-        this.tk103 = { oldpass: '' }
+
         this.router = express.Router()
-        // this.router.use(device.capture())
         this.httpRoutesGets()
         this.httpRoutesPosts()
         this.httpRoutesPut()
@@ -59,32 +50,32 @@ class Tasks {
 
         this.router.get('/', (req: Request, res: Response) => {
             let tasks = { tArr: ['Task page 0!'] }
-            console.log(tasks.tArr)
+            log(tasks.tArr)
             res.send(tasks)
         })
 
-        this.router.get('/book', makeExpressCallback(getPaginationBook))
+        // this.router.get('/book', makeExpressCallback(getPaginationBook))
 
         this.router.get('/jobs', function (req: Request, res: Response) {
             let jobs: any = [], jkeys: any = []
             const client = new MemCache().connect(15000).cb
 
             client.keys('*', function (err: any, keys: any) {
-                if (err) return console.log(err);
+                if (err) return log(err);
 
                 jkeys.push(keys[1])
-                console.log(keys)
+                log(keys)
             })
 
             let sessionID: string = `${'sess:' + req.sessionID}`
-            console.log(sessionID)
+            // log(sessionID)
             client.get(sessionID, function (error: any, value: any) {
                 if (error) return res.send(error);
 
-                let job = { key: value };
-                jobs.push(job)
-                console.log(value)
-                res.json(jobs)
+
+                jobs.push(value)
+                log(value)
+                res.status(200).json({ message: jobs, jkeys })
             })
 
         })
@@ -92,10 +83,10 @@ class Tasks {
 
 
         // We plugin our jwt strategy as a middleware so only verified users can access this route
-        this.router.get('/random', isJwtAuthWithPassport, random)
+        this.router.get('/random'/* , isJwtAuthWithPassport */, random)
 
         // LIBRARY
-        this.router.get('/library/search', isJwtAuth, makeExpressCallback(getLibrary)) // Search for Libraries
+        this.router.get('/library/search',/*  isJwtAuth, */ makeExpressCallback(getLibrary)) // Search for Libraries
         this.router.get('/library/search/:id', makeExpressCallback(getBook)); // Get Single task
         this.router.get('/library/book/search', isJwtAuth, makeExpressCallback(getPaginationBook)) // Search for Libraries
         this.router.get('/library/book/sku', isJwtAuth, makeExpressCallback(getBookBySKU))
@@ -107,7 +98,7 @@ class Tasks {
         this.router.get('/categories', isJwtAuth, this.getTasks); // Get All Tasks
         this.router.get('/categories/search', isJwtAuth, this.SearchByfilter); // Search All Categories
         this.router.get('/categories/book', isJwtAuth, this.SearchTasks) // Search for Libraries
-        this.router.get('/category/:id', isJwtAuth, this.getTask); // Get Single task
+        this.router.get('/category/:id', this.getTask); // Get Single task
 
         // USER
         this.router.get('/user/library/:id/cache/:hash', isJwtAuth, this.userCache, this.OneTask)
@@ -255,10 +246,7 @@ class Tasks {
                     if (debug.explain) console.log(k)
                     res.status(200).json({
                         code: 200, status: 'success', data: {
-                            result: k/* arrayToTree(categories, {
-                                parentProperty: 'parentId',
-                                customID: '_id'
-                            }) */
+                            result: k
                         }
                     });
                 })
@@ -1086,7 +1074,7 @@ class Tasks {
                         // if (err) { res.status(500).json(); }
                         if (err) next(err)
                         // console.log(result)
-                        next()
+                        return next()
                         // else res.status(200).json({ code: 200, status: 'success', data: { result } });
                     });
             }
@@ -1119,7 +1107,7 @@ class Tasks {
                     // if (err) { res.status(500).json(); }
                     if (err) next(err)
                     // console.log(result)
-                    next()
+                    return next()
                     // else res.status(200).json({ code: 200, status: 'success', data: { result } });
                 });
             }

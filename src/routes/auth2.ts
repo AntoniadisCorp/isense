@@ -172,7 +172,7 @@ class Auth2 {
                 }
             }),
             (req: any, res: Response) => {
-                console.log(req.oauth2);
+                log(req.oauth2);
 
                 res.render('dialog',
                     { transactionId: req.oauth2.transactionID, user: req.user, client: req.oauth2.client });

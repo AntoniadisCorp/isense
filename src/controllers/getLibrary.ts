@@ -1,4 +1,5 @@
 import { Request } from 'express';
+import { log } from '../logger/log';
 
 export default function makeGetLibrary({ listLibrary }: any) {
     return async function getLibrary(httpRequest: Request) {
@@ -7,7 +8,7 @@ export default function makeGetLibrary({ listLibrary }: any) {
         }
         try {
             // find for firstname and lastname and mobile
-
+            log(httpRequest.query.filter)
             const getLibraries = await listLibrary({
                 filter: httpRequest.query.filter,
                 col: httpRequest.query.col

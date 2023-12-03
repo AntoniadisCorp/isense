@@ -14,7 +14,7 @@ import { log } from '../logger/log';
 
 // var debug = require('debug')('technica:server');
 
-var enforce = require('express-sslify')
+// var enforce = require('express-sslify')
 // , key = fs.readFileSync('server-key.pem')
 // , cert = fs.readFileSync('server-crt.pem')
 // , pfx = fs.readFileSync('smartdeep.io.pfx')
@@ -46,7 +46,7 @@ serve.app.set('ip', ip);
  * Create HTTPS server.
  */
 // for https
-serve.app.use(enforce.HTTPS({ trustProtoHeader: true }))
+// serve.app.use(enforce.HTTPS({ trustProtoHeader: true }))
 const server = https.createServer(/* options */serve.app)
 
 /**
